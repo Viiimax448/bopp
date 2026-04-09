@@ -16,6 +16,25 @@ export default function AlbumPage() {
   const [isBackgroundDark, setIsBackgroundDark] = useState(true);
   const imgRef = useRef<HTMLImageElement>(null);
 
+  function extractRgb(input: unknown): [number, number, number] | null {
+    if (!input) return null;
+    const v: any = input;
+
+    const candidate =
+      (Array.isArray(v) ? v : null) ??
+      (Array.isArray(v?.rgb) ? v.rgb : null) ??
+      (Array.isArray(v?.color) ? v.color : null);
+
+    const r = candidate?.[0] ?? v?._r ?? v?.r ?? v?.[0];
+    const g = candidate?.[1] ?? v?._g ?? v?.g ?? v?.[1];
+    const b = candidate?.[2] ?? v?._b ?? v?.b ?? v?.[2];
+
+    if ([r, g, b].every((n) => typeof n === 'number' && Number.isFinite(n))) {
+      return [r, g, b];
+    }
+    return null;
+  }
+
   // Helper para luminancia
   function calcIsDark([r, g, b]: number[]) {
     return (r * 0.299 + g * 0.587 + b * 0.114) < 128;
@@ -201,14 +220,14 @@ export default function AlbumPage() {
                     setIsBackgroundDark(true);
                     return;
                   }
-                  const color = colorRaw as unknown as [number, number, number];
-                  const [r, g, b] = color;
-                  if ([r, g, b].every((v) => typeof v === 'number' && !isNaN(v))) {
+                  const rgb = extractRgb(colorRaw);
+                  if (rgb) {
+                    const [r, g, b] = rgb;
                     setDominantColor(`rgb(${r}, ${g}, ${b})`);
                     const isDarkValue = (r * 0.299 + g * 0.587 + b * 0.114) < 128;
                     setIsBackgroundDark(isDarkValue);
                   } else {
-                    console.error('ColorThief: valor inesperado extraído', color);
+                    console.error('ColorThief: valor inesperado extraído', colorRaw);
                     setDominantColor('#121212');
                     setIsBackgroundDark(true);
                   }
