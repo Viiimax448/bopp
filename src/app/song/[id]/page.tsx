@@ -140,7 +140,7 @@ export default function SongPage() {
 
 
   // Extraer metadata relevante de la canción y fallback si falta info
-  let album = {};
+  let album: any = {};
   let songName = '';
   let artists = '';
   let releaseYear = '';
@@ -158,7 +158,13 @@ export default function SongPage() {
   async function handleImageLoad() {
     if (!imgRef.current) return;
     try {
-      const rgb = await getColor(imgRef.current, 'rgbArray');
+      const rgbRaw = await getColor(imgRef.current);
+      if (!rgbRaw) {
+        setDominantColor('#121212');
+        setIsBackgroundDark(true);
+        return;
+      }
+      const rgb = rgbRaw as unknown as [number, number, number];
       setDominantColor(`rgb(${rgb[0]}, ${rgb[1]}, ${rgb[2]})`);
       setIsBackgroundDark(calcIsDark(rgb));
     } catch {
@@ -191,32 +197,26 @@ export default function SongPage() {
             style={{ display: 'none' }}
             onLoad={async (e) => {
               try {
-                const img = e.target;
+                const img = e.target as HTMLImageElement;
                 if (!img.naturalWidth || !img.naturalHeight) {
                   console.error('ColorThief: imagen sin dimensiones, no se puede extraer color');
                   setDominantColor('#121212');
                   setIsBackgroundDark(true);
                   return;
                 }
-                // @ts-ignore
-                const color = await getColor(img);
-                // Extracción defensiva de canales
-                const r = color?._r ?? color?.[0];
-                const g = color?._g ?? color?.[1];
-                const b = color?._b ?? color?.[2];
-                if ([r, g, b].every((v) => typeof v === 'number' && !isNaN(v))) {
+                const colorRaw = await getColor(img);
+                if (!colorRaw) {
+                  setDominantColor('#121212');
+                  setIsBackgroundDark(true);
+                  return;
+                }
+                const [r, g, b] = colorRaw as unknown as [number, number, number];
+                if ([r, g, b].every((v) => typeof v === 'number' && !Number.isNaN(v))) {
                   setDominantColor(`rgb(${r}, ${g}, ${b})`);
-                  let isDarkValue;
-                  if (typeof color.isDark === 'boolean') {
-                    isDarkValue = color.isDark;
-                  } else if (typeof color.isDark === 'function') {
-                    isDarkValue = color.isDark();
-                  } else {
-                    isDarkValue = (r * 0.299 + g * 0.587 + b * 0.114) < 128;
-                  }
+                  const isDarkValue = (r * 0.299 + g * 0.587 + b * 0.114) < 128;
                   setIsBackgroundDark(isDarkValue);
                 } else {
-                  console.error('ColorThief: valor inesperado extraído', color);
+                  console.error('ColorThief: valor inesperado extraído', colorRaw);
                   setDominantColor('#121212');
                   setIsBackgroundDark(true);
                 }
