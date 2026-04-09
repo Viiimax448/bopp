@@ -170,7 +170,7 @@ export default function ReviewModal({
             ref={textareaRef}
             className="w-full bg-transparent resize-none text-lg text-gray-900 placeholder-gray-400 outline-none focus:ring-0 border-0 min-h-[120px] max-h-[200px]"
             placeholder={PLACEHOLDER[type]}
-            maxLength={(charLimit + 1).toString()}
+            maxLength={charLimit + 1}
             value={text}
             onChange={e => setText(e.target.value)}
             aria-label="Escribe tu reseña"

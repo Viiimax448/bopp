@@ -195,22 +195,17 @@ export default function AlbumPage() {
                     setIsBackgroundDark(true);
                     return;
                   }
-                  // @ts-ignore
-                  const color = await getColor(img);
-                  // Extracción defensiva de canales
-                  const r = color?._r ?? color?.[0];
-                  const g = color?._g ?? color?.[1];
-                  const b = color?._b ?? color?.[2];
+                  const colorRaw = await getColor(img);
+                  if (!colorRaw) {
+                    setDominantColor('#121212');
+                    setIsBackgroundDark(true);
+                    return;
+                  }
+                  const color = colorRaw as unknown as [number, number, number];
+                  const [r, g, b] = color;
                   if ([r, g, b].every((v) => typeof v === 'number' && !isNaN(v))) {
                     setDominantColor(`rgb(${r}, ${g}, ${b})`);
-                    let isDarkValue;
-                    if (typeof color.isDark === 'boolean') {
-                      isDarkValue = color.isDark;
-                    } else if (typeof color.isDark === 'function') {
-                      isDarkValue = color.isDark();
-                    } else {
-                      isDarkValue = (r * 0.299 + g * 0.587 + b * 0.114) < 128;
-                    }
+                    const isDarkValue = (r * 0.299 + g * 0.587 + b * 0.114) < 128;
                     setIsBackgroundDark(isDarkValue);
                   } else {
                     console.error('ColorThief: valor inesperado extraído', color);

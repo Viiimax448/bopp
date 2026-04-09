@@ -60,7 +60,7 @@ export default function QuickRateCarousel({ items }: Props) {
           <ReviewModal
             isOpen={modal.open}
             onClose={() => setModal({ open: false })}
-            type={modal.item.type}
+            type={modal.item.type === 'track' ? 'song' : modal.item.type}
             title={modal.item.title}
             artist={modal.item.artist}
             rating={modalRating}
