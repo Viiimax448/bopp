@@ -1,6 +1,7 @@
 'use client'
 
 import { supabase } from '../utils/supabase/client'
+import { getURL } from '../utils/getURL'
 
 export default function SpotifyLoginButton() {
   const handleLogin = async () => {
@@ -8,7 +9,7 @@ export default function SpotifyLoginButton() {
       provider: 'spotify',
       options: {
         scopes: 'user-read-email user-top-read playlist-read-private user-library-read playlist-read-collaborative user-read-private',
-        redirectTo: `${window.location.origin}/auth/callback`
+        redirectTo: `${getURL()}auth/callback`
       }
     })
   }

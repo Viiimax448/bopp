@@ -4,6 +4,7 @@ import { FaSpotify } from 'react-icons/fa'
 import { FcGoogle } from 'react-icons/fc'
 import { BsMusicNoteBeamed } from 'react-icons/bs' // Usamos esta para el logo
 import { createBrowserClient } from '@supabase/ssr'
+import { getURL } from '@/utils/getURL'
 
 export default function Home() {
   // Inicializamos el cliente de Supabase para el navegador
@@ -17,7 +18,7 @@ export default function Home() {
     await supabase.auth.signInWithOAuth({
       provider: provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${getURL()}auth/callback`,
       },
     })
   }
