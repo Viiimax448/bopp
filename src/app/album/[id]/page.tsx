@@ -188,7 +188,7 @@ export default function AlbumPage() {
               style={{ display: 'none' }}
               onLoad={async (e) => {
                 try {
-                  const img = e.target;
+                  const img = e.target as HTMLImageElement;
                   if (!img.naturalWidth || !img.naturalHeight) {
                     console.error('ColorThief: imagen sin dimensiones, no se puede extraer color');
                     setDominantColor('#121212');
