@@ -4,12 +4,18 @@ import { usePathname } from "next/navigation";
 import { HiOutlineHome, HiHome } from "react-icons/hi";
 import { FiSearch } from "react-icons/fi";
 import { FaUser, FaRegUser } from "react-icons/fa";
+import { HiOutlineFire, HiFire } from "react-icons/hi";
 
 const navItems = [
   {
     href: "/inicio",
     label: "Inicio",
     icon: (active: boolean) => active ? <HiHome className="text-[#FB3C4C] scale-110" size={28} /> : <HiOutlineHome className="text-gray-400" size={26} />,
+  },
+  {
+    href: "/tendencias",
+    label: "Tendencias",
+    icon: (active: boolean) => active ? <HiFire className="text-[#FB3C4C] scale-110" size={26} /> : <HiOutlineFire className="text-gray-400" size={25} />,
   },
   {
     href: "/buscar",

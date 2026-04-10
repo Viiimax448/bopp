@@ -157,35 +157,50 @@ export default async function InicioPage() {
         </Link>
       </div>
 
+
       {/* Tendencias en Bopp */}
-      <h2 className="text-xl font-bold text-gray-900 px-4 mb-4">Tendencias en Bopp</h2>
+      <div className="flex justify-between items-end px-4 mb-4">
+        <h2 className="text-xl font-bold text-gray-900">Tendencias en Bopp</h2>
+        <Link href="/tendencias" className="text-sm text-[#FB3C4C] font-medium mb-1 hover:underline">Ver todas &gt;</Link>
+      </div>
       <div className="flex overflow-x-auto gap-4 px-4 pb-2 hide-scrollbar">
         {trending && trending.length > 0 ? (
-          trending.map((item) => (
-            <div
-              key={item.spotify_id}
-              className="shrink-0 w-32 flex flex-col items-center bg-white rounded-2xl shadow-sm p-2"
+          <>
+            {trending.slice(0, 5).map((item) => (
+              <Link
+                key={item.spotify_id}
+                href={`/album/${item.spotify_id}`}
+                className="shrink-0 w-32 flex flex-col items-center bg-white rounded-2xl shadow-sm p-2 hover:opacity-80 transition"
+              >
+                {item.image_url ? (
+                  <img
+                    src={item.image_url}
+                    alt={item.title}
+                    className="w-28 h-28 rounded-xl object-cover shadow"
+                  />
+                ) : (
+                  <div className="w-28 h-28 rounded-xl bg-gray-100" />
+                )}
+                <div className="text-sm font-bold text-gray-900 mt-2 truncate w-full text-center">
+                  {item.title}
+                </div>
+                <div className="text-xs text-gray-500 truncate w-full text-center">
+                  {item.artist}
+                </div>
+                <div className="mt-1 text-xs text-orange-500 flex items-center justify-center">
+                  {item.review_count} reseñas
+                </div>
+              </Link>
+            ))}
+            {/* Tarjeta final de Ver más */}
+            <Link
+              href="/tendencias"
+              className="flex-shrink-0 w-28 h-28 sm:w-32 sm:h-32 bg-gray-50 rounded-xl border border-gray-200 flex flex-col items-center justify-center text-gray-500 hover:bg-gray-100 transition gap-2"
             >
-              {item.image_url ? (
-                <img
-                  src={item.image_url}
-                  alt={item.title}
-                  className="w-28 h-28 rounded-xl object-cover shadow"
-                />
-              ) : (
-                <div className="w-28 h-28 rounded-xl bg-gray-100" />
-              )}
-              <div className="text-sm font-bold text-gray-900 mt-2 truncate w-full text-center">
-                {item.title}
-              </div>
-              <div className="text-xs text-gray-500 truncate w-full text-center">
-                {item.artist}
-              </div>
-              <div className="mt-1 text-xs text-orange-500 flex items-center justify-center">
-                {item.review_count} reseñas
-              </div>
-            </div>
-          ))
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+              <span className="text-xs font-medium">Ver más</span>
+            </Link>
+          </>
         ) : (
           <div className="text-gray-400 text-sm py-8">No hay tendencias esta semana.</div>
         )}

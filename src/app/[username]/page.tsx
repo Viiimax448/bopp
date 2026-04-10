@@ -148,51 +148,78 @@ export default function PublicProfilePage() {
       <div className="flex items-center px-4 pt-6 pb-2">
         <button onClick={() => router.back()} className="text-2xl text-gray-400">×</button>
       </div>
-      {/* Avatar, nombre y username */}
-      <div className="flex flex-col items-center mt-2 mb-4">
-        {profile?.avatar_url ? (
-          <img
-            src={profile.avatar_url}
-            alt={profile.username}
-            className="w-32 h-32 rounded-full object-cover mb-2"
-          />
-        ) : (
-          <div className="w-32 h-32 rounded-full bg-gray-300 flex items-center justify-center text-5xl font-bold text-white">
-            {profile?.username?.charAt(0).toUpperCase() || "U"}
+      {/* Header estilo Instagram mobile (foto a la izquierda) */}
+      <div className="flex items-center px-4 mt-2 gap-4">
+        {/* Foto de perfil a la izquierda */}
+        <div className="shrink-0 flex flex-col items-center justify-center">
+          {profile?.avatar_url ? (
+            <img
+              src={profile.avatar_url}
+              alt={profile.username}
+              className="w-20 h-20 rounded-full object-cover shadow"
+            />
+          ) : (
+            <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center text-3xl font-bold text-white">
+              {profile?.username?.charAt(0).toUpperCase() || "U"}
+            </div>
+          )}
+        </div>
+        {/* Datos y stats a la derecha */}
+        <div className="flex-1 flex flex-col justify-center gap-1">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
+            <div className="text-base font-bold text-gray-900 leading-tight truncate max-w-[180px]">{profile?.full_name || ""}</div>
+            {profile?.is_plus && (
+              <span className="mt-1 sm:mt-0 sm:ml-2 inline-block px-2 py-0.5 rounded-full bg-[#FB3C4C] text-white text-[10px] font-bold">Bopp+</span>
+            )}
           </div>
-        )}
-        <div className="mt-3 text-2xl font-extrabold text-gray-900">{profile?.full_name || ""}</div>
-        <div className="text-gray-500 text-base">@{profile?.username || "usuario"}</div>
-        {profile?.is_plus && (
-          <span className="mt-2 px-3 py-1 rounded-full bg-[#FB3C4C] text-white text-xs font-bold">Bopp+</span>
-        )}
-        {/* Botón seguir/siguiendo */}
-        {session?.user?.id && !isOwnProfile && profile?.id && (
-          <FollowButton
-            targetUserId={profile.id}
-            currentUserId={session.user.id}
-            initialIsFollowing={isFollowing}
-            initialFollowersCount={followersCount}
-          />
-        )}
-      </div>
-      {/* Stats Bar */}
-      <div className="flex items-center justify-center gap-4 px-6 mb-6">
-        <div className="flex-1 text-center">
-          <span className="font-bold text-gray-900">{reviews.length}</span>
-          <span className="text-gray-500 text-xs block">Calificaciones</span>
-        </div>
-        <div className="w-px h-6 bg-gray-300" />
-        <div className="flex-1 text-center">
-          <span className="font-bold text-gray-900">{followingCount}</span>
-          <span className="text-gray-500 text-xs block">Siguiendo</span>
-        </div>
-        <div className="w-px h-6 bg-gray-300" />
-        <div className="flex-1 text-center">
-          <span className="font-bold text-gray-900">{followersCount}</span>
-          <span className="text-gray-500 text-xs block">Seguidores</span>
+          <div className="text-gray-500 text-xs truncate max-w-[180px]">@{profile?.username || "usuario"}</div>
+          <div className="flex items-center gap-4 mt-1">
+            <div className="flex flex-col items-center">
+              <span className="font-bold text-gray-900 text-sm">{reviews.length}</span>
+              <span className="text-gray-500 text-[10px]">Calificaciones</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="font-bold text-gray-900 text-sm">{followersCount}</span>
+              <span className="text-gray-500 text-[10px]">Seguidores</span>
+            </div>
+            <div className="flex flex-col items-center">
+              <span className="font-bold text-gray-900 text-sm">{followingCount}</span>
+              <span className="text-gray-500 text-[10px]">Siguiendo</span>
+            </div>
+          </div>
         </div>
       </div>
+      {/* Botones debajo del bloque de perfil */}
+      {session?.user?.id && !isOwnProfile && profile?.id && (
+        <div className="flex gap-3 px-4 mt-3 mb-6">
+          <div className="flex-1">
+            <FollowButton
+              targetUserId={profile.id}
+              currentUserId={session.user.id}
+              initialIsFollowing={isFollowing}
+              initialFollowersCount={followersCount}
+            />
+          </div>
+          <button
+            className="flex-1 w-full h-11 px-4 rounded-full font-bold transition border text-sm flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200"
+            style={{ minHeight: '2.75rem' }}
+            title="Compartir perfil"
+            onClick={() => {
+              if (navigator.share) {
+                navigator.share({
+                  title: `Perfil de ${profile.full_name || profile.username}`,
+                  url: window.location.href,
+                });
+              } else {
+                navigator.clipboard.writeText(window.location.href);
+                alert('Enlace copiado al portapapeles');
+              }
+            }}
+          >
+            Compartir
+          </button>
+        </div>
+      )}
       {/* Preferidos */}
       <div className="px-4 mb-6">
         <div className="bg-white rounded-2xl shadow-md p-4 mb-4">
