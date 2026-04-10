@@ -30,8 +30,8 @@ export async function getSpotifyToken(): Promise<string> {
     throw new Error(`Error autenticando con Spotify: ${authData.error_description || authData.error || 'Desconocido'}`);
   }
 
-  cachedToken = authData.access_token;
+  cachedToken = authData.access_token || '';
   // expires_in viene en segundos, restamos 60s para margen
   tokenExpiration = Date.now() + (authData.expires_in * 1000) - 60000;
-  return cachedToken;
+  return cachedToken || '';
 }
