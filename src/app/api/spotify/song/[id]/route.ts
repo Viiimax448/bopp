@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server';
 import { getSpotifyToken } from '@/utils/spotify';
 
@@ -16,6 +17,7 @@ export async function GET(
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
+      cache: 'no-store',
     });
 
     if (!trackResponse.ok) {

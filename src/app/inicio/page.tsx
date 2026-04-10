@@ -55,7 +55,7 @@ export default async function InicioPage() {
   const joined = await supabase
     .from("reviews")
     .select(
-      "id,user_id,spotify_id,type,rating,review_text,created_at,profiles(full_name,username,avatar_url)"
+      "id,user_id,spotify_id,type,rating,review_text,created_at,spotify_title,spotify_artist,spotify_image_url,profiles(full_name,username,avatar_url)"
     )
     .in("user_id", followingIds)
     .order("created_at", { ascending: false });
@@ -73,6 +73,9 @@ export default async function InicioPage() {
         rating: r.rating ?? 0,
         review_text: r.review_text ?? null,
         created_at: r.created_at,
+        spotify_title: r.spotify_title ?? null,
+        spotify_artist: r.spotify_artist ?? null,
+        spotify_image_url: r.spotify_image_url ?? null,
         author: {
           full_name: profile?.full_name ?? null,
           username: profile?.username ?? null,
@@ -99,6 +102,9 @@ export default async function InicioPage() {
       const profile = profileById.get(r.user_id);
       return {
         ...r,
+        spotify_title: r.spotify_title ?? null,
+        spotify_artist: r.spotify_artist ?? null,
+        spotify_image_url: r.spotify_image_url ?? null,
         author: {
           full_name: profile?.full_name ?? null,
           username: profile?.username ?? null,

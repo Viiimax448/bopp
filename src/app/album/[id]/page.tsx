@@ -55,6 +55,7 @@ export default function AlbumPage() {
   useEffect(() => {
     if (!params?.id) return;
     setIsLoading(true);
+    console.log('Haciendo fetch a Spotify API...');
     fetch(`/api/spotify/album/${params.id}`)
       .then(res => res.json())
       .then(async (albumData) => {
