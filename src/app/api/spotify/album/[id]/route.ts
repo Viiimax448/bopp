@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getSpotifyToken } from '@/utils/spotify';
 
 export async function GET(
   request: Request,
@@ -8,33 +9,22 @@ export async function GET(
   const { id } = await context.params;
 
   try {
-    // 1. Obtener el token de Spotify (Client Credentials)
-    const authResponse = await fetch('https://accounts.spotify.com/api/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        Authorization: `Basic ${Buffer.from(
-          `${process.env.SPOTIFY_CLIENT_ID}:${process.env.SPOTIFY_CLIENT_SECRET}`
-        ).toString('base64')}`,
-      },
-      body: 'grant_type=client_credentials',
-    });
-
-    const authData = await authResponse.json();
-    
-    if (!authResponse.ok) {
-      throw new Error('Falló la autenticación con Spotify');
-    }
-
-    // 2. Buscar el álbum real en Spotify con el ID que recibimos
+    // Obtener token cacheado
+    const accessToken = await getSpotifyToken();
+    // Buscar el álbum real en Spotify con el ID que recibimos
     const albumResponse = await fetch(`https://api.spotify.com/v1/albums/${id}`, {
       headers: {
-        Authorization: `Bearer ${authData.access_token}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
 
     if (!albumResponse.ok) {
-      return NextResponse.json({ error: 'Álbum no encontrado' }, { status: 404 });
+      const errorText = await albumResponse.text();
+      if (albumResponse.status === 404) {
+        return NextResponse.json({ error: 'Álbum no encontrado' }, { status: 404 });
+      }
+      console.error('Spotify API error:', albumResponse.status, errorText);
+      return NextResponse.json({ error: errorText }, { status: 500 });
     }
 
     const albumData = await albumResponse.json();
@@ -42,6 +32,6 @@ export async function GET(
 
   } catch (error) {
     console.error('Error en el backend de Spotify:', error);
-    return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
+    return NextResponse.json({ error: String(error) }, { status: 500 });
   }
 }  3

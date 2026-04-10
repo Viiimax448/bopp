@@ -110,17 +110,19 @@ export default function BuscarPage() {
         ))}
         {/* Resultados Gente */}
         {!isLoading && activeTab === "Gente" && results.length > 0 && results.map((user: any) => (
-          <div key={user.id} className="flex items-center gap-3 mb-2 p-0.5 px-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition min-h-[3.5rem]">
-            <img
-              src={user.avatar_url || "/default-avatar.png"}
-              alt={user.username}
-              className="w-10 h-10 rounded-full object-cover" />
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-sm text-black truncate">{user.username}</div>
-              <div className="text-xs text-gray-400 truncate">{user.full_name || user.email}</div>
+          <Link key={user.id} href={`/${user.username}`} className="block">
+            <div className="flex items-center gap-3 mb-2 p-0.5 px-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition min-h-[3.5rem]">
+              <img
+                src={user.avatar_url || "/default-avatar.png"}
+                alt={user.username}
+                className="w-10 h-10 rounded-full object-cover" />
+              <div className="flex-1 min-w-0">
+                <div className="font-bold text-sm text-black truncate">{user.username}</div>
+                <div className="text-xs text-gray-400 truncate">{user.full_name || user.email}</div>
+              </div>
+              <FaChevronRight className="ml-2 text-xs text-gray-900 opacity-50" />
             </div>
-            <FaChevronRight className="ml-2 text-xs text-gray-900 opacity-50" />
-          </div>
+          </Link>
         ))}
       </div>
       <BottomNav />

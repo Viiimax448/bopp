@@ -21,6 +21,10 @@ export default function PerfilPage() {
   const [pickerSlot, setPickerSlot] = useState<number | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string>("");
+  // Contadores de followers/following
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+
   // Optimistic UI para update de perfil
   const handleProfileUpdate = (data: { full_name: string; username: string }) => {
     setProfile((p: any) => ({ ...p, ...data }));
@@ -44,18 +48,31 @@ export default function PerfilPage() {
         return;
       }
       const userId = userData.user.id;
-      const { data: profileData } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
-      setProfile(profileData);
-      const { data: reviewsData } = await supabase
-        .from("reviews")
-        .select("*")
-        .eq("user_id", userId)
-        .order("created_at", { ascending: false });
-      setReviews(reviewsData || []);
+      // Stats y reviews en paralelo
+      const [profileRes, followersRes, followingRes, reviewsRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", userId)
+          .single(),
+        supabase
+          .from("followers")
+          .select("*", { count: "exact", head: true })
+          .eq("following_id", userId),
+        supabase
+          .from("followers")
+          .select("*", { count: "exact", head: true })
+          .eq("follower_id", userId),
+        supabase
+          .from("reviews")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false }),
+      ]);
+      setProfile(profileRes.data);
+      setFollowersCount(followersRes.count || 0);
+      setFollowingCount(followingRes.count || 0);
+      setReviews(reviewsRes.data || []);
       setLoading(false);
     };
     fetchData();
@@ -206,17 +223,17 @@ export default function PerfilPage() {
       {/* Stats Bar */}
       <div className="flex items-center justify-center gap-4 px-6 mb-6">
         <div className="flex-1 text-center">
-          <span className="font-bold text-gray-900">{profile?.reviews_count ?? 0}</span>
+          <span className="font-bold text-gray-900">{reviews.length}</span>
           <span className="text-gray-500 text-xs block">Calificaciones</span>
         </div>
         <div className="w-px h-6 bg-gray-300" />
         <div className="flex-1 text-center">
-          <span className="font-bold text-gray-900">{profile?.following_count ?? 0}</span>
+          <span className="font-bold text-gray-900">{followingCount}</span>
           <span className="text-gray-500 text-xs block">Siguiendo</span>
         </div>
         <div className="w-px h-6 bg-gray-300" />
         <div className="flex-1 text-center">
-          <span className="font-bold text-gray-900">{profile?.followers_count ?? 0}</span>
+          <span className="font-bold text-gray-900">{followersCount}</span>
           <span className="text-gray-500 text-xs block">Seguidores</span>
         </div>
       </div>

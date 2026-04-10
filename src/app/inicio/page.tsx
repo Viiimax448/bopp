@@ -1,178 +1,222 @@
 
-'use client';
+import { createServerClient } from "@supabase/ssr";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import Link from "next/link";
+import { FaUsers } from "react-icons/fa";
 import BottomNav from "@/components/BottomNav";
+import FeedReviewCard, { FeedAuthor, FeedReview } from "@/components/FeedReviewCard";
 
-
-import { useEffect, useState } from 'react'
-import { supabase } from '@/utils/supabase/client'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { FaSearch, FaRegStar, FaStar, FaStarHalfAlt } from 'react-icons/fa'
-
-import { MdTouchApp } from 'react-icons/md'
-import { BsMusicNoteBeamed } from 'react-icons/bs'
-import QuickRateCarousel, { QuickRateItem } from '@/components/QuickRateCarousel'
-
-type FeedItem = {
-  id: string
-  title: string
-  artist: string
-  image: string
-  spotifyUrl?: string
-  type: 'album' | 'track'
+function timeAgo(createdAt: string) {
+  const created = new Date(createdAt).getTime();
+  const diffSeconds = Math.max(0, Math.floor((Date.now() - created) / 1000));
+  if (diffSeconds < 60) return "hace un momento";
+  const diffMinutes = Math.floor(diffSeconds / 60);
+  if (diffMinutes < 60) return `hace ${diffMinutes}m`;
+  const diffHours = Math.floor(diffMinutes / 60);
+  if (diffHours < 24) return `hace ${diffHours}h`;
+  const diffDays = Math.floor(diffHours / 24);
+  return `hace ${diffDays}d`;
 }
 
-type SpotifyData = {
-  calificacionVeloz: QuickRateItem[]
-  tendencias: FeedItem[]
-}
-
-
-export default function InicioPage() {
-  const [data, setData] = useState<SpotifyData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [trendStats, setTrendStats] = useState<Record<string, { average: number, total: number }>>({});
-  const router = useRouter();
-
-  // Fetch de datos de Spotify
-  useEffect(() => {
-    fetch('/api/spotify')
-      .then(res => res.json())
-      .then(setData)
-      .finally(() => setLoading(false))
-  }, [])
-
-  // Fetch de stats de reviews para tendencias
-  useEffect(() => {
-    async function fetchAllStats() {
-      if (!data?.tendencias) return;
-      const ids = data.tendencias.map(item => item.id);
-      if (ids.length === 0) return;
-      const { data: reviews, error } = await supabase
-        .from('reviews')
-        .select('spotify_id, rating');
-      // Agrupar reviews por spotify_id
-      const stats: Record<string, { average: number, total: number }> = {};
-      ids.forEach(id => {
-        const filtered = (reviews || []).filter(r => r.spotify_id === id);
-        const total = filtered.length;
-        const average = total > 0 ? Math.round((filtered.reduce((acc, r) => acc + (r.rating || 0), 0) / total) * 10) / 10 : 0;
-        stats[id] = { average, total };
-      });
-      setTrendStats(stats);
+export default async function InicioPage() {
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll() {
+          // No-op en Server Components.
+        },
+      },
     }
-    fetchAllStats();
-  }, [data?.tendencias]);
+  );
 
-  // Handler para abrir buscar
-  const handleSearchFocus = (e: React.FocusEvent<HTMLInputElement> | React.MouseEvent<HTMLInputElement>) => {
-    e.preventDefault();
-    router.push('/buscar');
-  };
+  const { data: userData } = await supabase.auth.getUser();
+  const user = userData?.user;
+  if (!user) {
+    redirect("/");
+  }
 
-  // --- INICIO DEL RETURN DEL COMPONENTE ---
+  const { data: followingRows } = await supabase
+    .from("followers")
+    .select("following_id")
+    .eq("follower_id", user.id);
+
+  const followingIds = Array.from(
+    new Set([user.id, ...(followingRows || []).map((r: any) => r.following_id)])
+  );
+
+  // Intento de join: reviews + profiles
+  const joined = await supabase
+    .from("reviews")
+    .select(
+      "id,user_id,spotify_id,type,rating,review_text,created_at,profiles(full_name,username,avatar_url)"
+    )
+    .in("user_id", followingIds)
+    .order("created_at", { ascending: false });
+
+  let reviews: Array<FeedReview & { author: FeedAuthor }> = [];
+
+  if (!joined.error) {
+    reviews = (joined.data || []).map((r: any) => {
+      const profile = r.profiles && !Array.isArray(r.profiles) ? r.profiles : (r.profiles?.[0] ?? null);
+      return {
+        id: r.id,
+        user_id: r.user_id,
+        spotify_id: r.spotify_id,
+        type: r.type,
+        rating: r.rating ?? 0,
+        review_text: r.review_text ?? null,
+        created_at: r.created_at,
+        author: {
+          full_name: profile?.full_name ?? null,
+          username: profile?.username ?? null,
+          avatar_url: profile?.avatar_url ?? null,
+        },
+      };
+    });
+  } else {
+    // Fallback: sin relación, hacemos 2 queries
+    const { data: reviewsData } = await supabase
+      .from("reviews")
+      .select("id,user_id,spotify_id,type,rating,review_text,created_at")
+      .in("user_id", followingIds)
+      .order("created_at", { ascending: false });
+
+    const authorIds = Array.from(new Set((reviewsData || []).map((r: any) => r.user_id)));
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("id,full_name,username,avatar_url")
+      .in("id", authorIds);
+
+    const profileById = new Map((profilesData || []).map((p: any) => [p.id, p]));
+    reviews = (reviewsData || []).map((r: any) => {
+      const profile = profileById.get(r.user_id);
+      return {
+        ...r,
+        author: {
+          full_name: profile?.full_name ?? null,
+          username: profile?.username ?? null,
+          avatar_url: profile?.avatar_url ?? null,
+        },
+      };
+    });
+  }
+
+  // Obtener perfil del usuario logueado
+    // Fetch tendencias de la semana desde la vista
+    const { data: trending, error: trendingError } = await supabase
+      .from("trending_this_week")
+      .select("*");
+  let currentUserProfile = null;
+  if (user) {
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("full_name,avatar_url")
+      .eq("id", user.id)
+      .single();
+    currentUserProfile = profileData;
+  }
+
   return (
-    <div className="bg-white min-h-screen">
-      {/* Search */}
-      <div className="flex justify-center px-4 mb-6 mt-6">
-        <div className="relative w-full max-w-xl">
-          <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input
-            type="text"
-            placeholder="*Busca un álbum, artista o canción..."
-            className="w-full pl-12 pr-4 py-3 rounded-full bg-gray-100 text-base outline-none placeholder:text-gray-400 cursor-pointer"
-            onFocus={handleSearchFocus}
-            onClick={handleSearchFocus}
-            readOnly
-          />
-        </div>
+    <div className="min-h-screen bg-white">
+      <header className="flex justify-between items-center px-4 pt-4 pb-2">
+        <h1 className="text-3xl font-black text-[#FB3C4C] tracking-tighter">Bopp</h1>
+        {currentUserProfile && (
+          <Link
+            href="/perfil"
+            className="transition-transform hover:scale-105 active:scale-95"
+          >
+            <img
+              src={currentUserProfile.avatar_url || "/default-avatar.png"}
+              alt="Perfil"
+              className="w-9 h-9 rounded-full object-cover border border-gray-200 shadow-sm"
+            />
+          </Link>
+        )}
+      </header>
+
+      {/* Barra de búsqueda minimalista */}
+      <div className="px-4 mt-2 mb-4">
+        <Link href="/buscar" className="block">
+          <div className="flex items-center bg-gray-100 rounded-2xl px-4 py-3 cursor-pointer">
+            <svg className="w-5 h-5 text-gray-400 mr-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></svg>
+            <span className="text-gray-500 text-base select-none">Busca un álbum, artista o canción...</span>
+          </div>
+        </Link>
       </div>
 
-      {/* Calificación veloz */}
-      <SectionHeader title="Calificación veloz" link="Ver más >" />
-      <div className="mb-8">
-        {loading && (
-          <div className="flex gap-4 px-2">
-            {[...Array(2)].map((_, i) => (
-              <div key={i} className="min-w-[75%] md:min-w-[60%] snap-center bg-gray-100 rounded-2xl p-4 flex flex-col items-center animate-pulse">
-                <div className="w-40 h-40 rounded-xl bg-gray-200 mb-4" />
-                <div className="h-5 w-32 bg-gray-200 rounded mb-2" />
-                <div className="h-4 w-24 bg-gray-100 rounded mb-3" />
-                <div className="flex gap-2 mt-2">
-                  {[...Array(5)].map((_, j) => (
-                    <div key={j} className="w-8 h-8 rounded-full bg-gray-200" />
-                  ))}
-                </div>
-                <div className="h-10 w-36 bg-gray-200 rounded-full mt-4" />
+      {/* Tendencias en Bopp */}
+      <h2 className="text-xl font-bold text-gray-900 px-4 mb-4">Tendencias en Bopp</h2>
+      <div className="flex overflow-x-auto gap-4 px-4 pb-2 hide-scrollbar">
+        {trending && trending.length > 0 ? (
+          trending.map((item) => (
+            <div
+              key={item.spotify_id}
+              className="shrink-0 w-32 flex flex-col items-center bg-white rounded-2xl shadow-sm p-2"
+            >
+              {item.image_url ? (
+                <img
+                  src={item.image_url}
+                  alt={item.title}
+                  className="w-28 h-28 rounded-xl object-cover shadow"
+                />
+              ) : (
+                <div className="w-28 h-28 rounded-xl bg-gray-100" />
+              )}
+              <div className="text-sm font-bold text-gray-900 mt-2 truncate w-full text-center">
+                {item.title}
               </div>
+              <div className="text-xs text-gray-500 truncate w-full text-center">
+                {item.artist}
+              </div>
+              <div className="mt-1 text-xs text-orange-500 flex items-center justify-center">
+                {item.review_count} reseñas
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="text-gray-400 text-sm py-8">No hay tendencias esta semana.</div>
+        )}
+      </div>
+
+      <h2 className="text-xl font-bold text-gray-900 px-4 mt-8 mb-4">Actividad reciente</h2>
+
+      <div className="px-4 pb-32">
+        {reviews.length === 0 ? (
+          <div className="bg-[#F5F5F7] rounded-2xl p-8 flex flex-col items-center text-center">
+            <FaUsers className="text-4xl text-gray-400 mb-3" />
+            <div className="text-xl font-bold text-gray-900 mb-1">Tu feed está vacío</div>
+            <div className="text-gray-500 mb-6">
+              Seguí a tus amigos para ver sus últimas reseñas.
+            </div>
+            <Link
+              href="/buscar"
+              className="px-6 py-3 rounded-full bg-[#FB3C4C] text-white font-bold"
+            >
+              Buscar amigos
+            </Link>
+          </div>
+        ) : (
+          <div className="bg-white">
+            {reviews.map((r) => (
+              <FeedReviewCard
+                key={r.id}
+                review={r}
+                author={r.author}
+                timeLabel={timeAgo(r.created_at)}
+              />
             ))}
           </div>
         )}
-        {!loading && (data?.calificacionVeloz?.length || 0) > 0 && (
-          <QuickRateCarousel items={data?.calificacionVeloz ?? []} />
-        )}
-        {!loading && (data?.calificacionVeloz?.length || 0) === 0 && (
-          <div className="text-center text-gray-400 py-8">No se encontraron canciones.</div>
-        )}
       </div>
 
-      {/* Tendencias de la semana */}
-      <SectionHeader title="Tendencias de la semana" link="Ver más >" />
-      <div className="overflow-x-auto scrollbar-hide flex gap-4 px-4 pb-4">
-        {loading && (
-          <div className="text-center text-gray-400 py-8">Cargando vibra...</div>
-        )}
-        {!loading && data?.tendencias?.map((item, i) => {
-          const stats = trendStats[item.id] || { average: 0, total: 0 };
-          function renderStars() {
-            const stars = [];
-            for (let j = 1; j <= 5; j++) {
-              if (stats.average >= j) {
-                stars.push(<FaStar key={j} className="text-[#FB3C4C]" size={14} />);
-              } else if (stats.average >= j - 0.7) {
-                stars.push(<FaStarHalfAlt key={j} className="text-[#FB3C4C]" size={14} />);
-              } else {
-                stars.push(<FaRegStar key={j} className="text-gray-200" size={14} />);
-              }
-            }
-            return stars;
-          }
-          return (
-            <Link
-              key={`${item.id}-${item.type}-${i}`}
-              href={`/${item.type === 'track' ? 'song' : 'album'}/${item.id}`}
-              className="shrink-0 w-36"
-            >
-              <div className="w-36 h-36 rounded-2xl overflow-hidden mb-2 bg-gray-100">
-                <img
-                  src={item.image}
-                  alt={item.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="truncate font-semibold text-black">{item.title}</div>
-              <div className="truncate text-sm text-gray-500">{item.artist}</div>
-              <div className="flex items-center gap-1 mt-1">
-                {renderStars()}
-                <span className="ml-1 text-sm text-black">{stats.average.toFixed(1)}</span>
-              </div>
-              <div className="text-xs text-gray-400">{stats.total === 0 ? '- reviews' : stats.total === 1 ? '1 review' : `${stats.total} reviews`}</div>
-            </Link>
-          );
-        })}
-      </div>
       <BottomNav />
     </div>
   );
-}
-
-function SectionHeader({ title, link }: { title: string; link: string }) {
-  return (
-    <div className="flex items-center justify-between px-4 mb-2 mt-6">
-      <h2 className="text-xl font-bold text-black">{title}</h2>
-      <a href="#" className="text-red-500 text-sm font-medium hover:underline">
-        {link}
-      </a>
-    </div>
-  )
 }

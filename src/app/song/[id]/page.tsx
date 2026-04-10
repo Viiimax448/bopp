@@ -408,6 +408,7 @@ export default function SongPage() {
         rating={rating}
         setRating={setRating}
         spotifyId={song.id}
+        spotifyImageUrl={song?.album?.images?.[0]?.url || song?.images?.[0]?.url || ''}
       />
     </div>
   )

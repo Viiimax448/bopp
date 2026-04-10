@@ -428,6 +428,7 @@ export default function AlbumPage() {
         rating={rating}
         setRating={setRating}
         spotifyId={album.id}
+        spotifyImageUrl={album.images?.[0]?.url || ''}
       />
     </>
   )

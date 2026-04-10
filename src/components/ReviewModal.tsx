@@ -14,6 +14,7 @@ interface ReviewModalProps {
   rating: number;
   setRating: (val: number) => void;
   spotifyId: string;
+  spotifyImageUrl?: string;
 }
 
 const STAR_COLOR = "#FB3C4C";
@@ -33,6 +34,7 @@ export default function ReviewModal({
   rating,
   setRating,
   spotifyId,
+  spotifyImageUrl,
 }: ReviewModalProps) {
   const [hover, setHover] = useState<number>(0);
   const [text, setText] = useState<string>("");
@@ -96,6 +98,9 @@ export default function ReviewModal({
         rating,
         review_text: text,
         hot_takes,
+        spotify_title: title,
+        spotify_artist: artist,
+        spotify_image_url: spotifyImageUrl || null,
       };
       const { error } = await supabase
         .from('reviews')
