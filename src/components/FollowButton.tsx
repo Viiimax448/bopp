@@ -48,12 +48,11 @@ export default function FollowButton({
 
   return (
     <button
-      className={`w-full h-11 px-4 rounded-full font-bold transition border text-sm flex items-center justify-center ${
+      className={`px-6 min-w-[120px] py-2 rounded-full font-bold my-2 transition border text-base ${
         isFollowing
           ? "bg-gray-100 text-gray-500 border-gray-300"
           : "bg-[#FB3C4C] text-white border-transparent hover:bg-[#e12b3a]"
       } ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
-      style={{ minHeight: '2.75rem' }}
       onClick={handleClick}
       disabled={loading}
     >

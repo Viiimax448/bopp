@@ -4,28 +4,28 @@ import { usePathname } from "next/navigation";
 import { HiOutlineHome, HiHome } from "react-icons/hi";
 import { FiSearch } from "react-icons/fi";
 import { FaUser, FaRegUser } from "react-icons/fa";
-import { HiOutlineFire, HiFire } from "react-icons/hi";
+import { IoStatsChart } from "react-icons/io5";
 
 const navItems = [
   {
     href: "/inicio",
     label: "Inicio",
-    icon: (active: boolean) => active ? <HiHome className="text-[#FB3C4C] scale-110" size={28} /> : <HiOutlineHome className="text-gray-400" size={26} />,
+    icon: (active: boolean) => active ? <HiHome className="text-blue-600 scale-110" size={28} /> : <HiOutlineHome className="text-gray-400" size={26} />,
   },
   {
     href: "/tendencias",
     label: "Tendencias",
-    icon: (active: boolean) => active ? <HiFire className="text-[#FB3C4C] scale-110" size={26} /> : <HiOutlineFire className="text-gray-400" size={25} />,
+    icon: (active: boolean) => active ? <IoStatsChart className="text-blue-600 scale-110" size={26} /> : <IoStatsChart className="text-gray-400" size={25} />,
   },
   {
     href: "/buscar",
     label: "Buscar",
-    icon: (active: boolean) => <FiSearch className={active ? "text-[#FB3C4C] scale-110" : "text-gray-400"} size={26} />,
+    icon: (active: boolean) => <FiSearch className={active ? "text-blue-600 scale-110" : "text-gray-400"} size={26} />,
   },
   {
     href: "/perfil",
     label: "Perfil",
-    icon: (active: boolean) => active ? <FaUser className="text-[#FB3C4C] scale-110" size={25} /> : <FaRegUser className="text-gray-400" size={24} />,
+    icon: (active: boolean) => active ? <FaUser className="text-blue-600 scale-110" size={25} /> : <FaRegUser className="text-gray-400" size={24} />,
   },
 ];
 

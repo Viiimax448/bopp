@@ -1,14 +1,21 @@
 
 "use client";
-import { useRouter, useParams } from "next/navigation";
+
 import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
+import { FaEllipsisH } from "react-icons/fa";
+
 import ReviewCard from "@/components/ReviewCard";
+import BottomNav from "@/components/BottomNav";
 import FollowButton from "@/components/FollowButton";
+
+import type { TopItem } from "../perfil/TopPickerModal.types";
 
 export default function PublicProfilePage() {
   const router = useRouter();
   const { username } = useParams();
+
   const [profile, setProfile] = useState<any>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -18,23 +25,23 @@ export default function PublicProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
-    Promise.all([
-      supabase
-        .from("profiles")
-        .select("*")
-        .eq("username", username)
-        .single(),
-      supabase.auth.getSession(),
-    ]).then(([{ data: profileData }, { data: sessionData }]) => {
+
+    const fetchBase = async () => {
+      setLoading(true);
+      const [{ data: profileData }, { data: sessionData }] = await Promise.all([
+        supabase.from("profiles").select("*").eq("username", username).single(),
+        supabase.auth.getSession(),
+      ]);
       setProfile(profileData);
       setSession(sessionData.session);
       setLoading(false);
-    });
+    };
+
+    fetchBase();
   }, [username]);
 
   useEffect(() => {
@@ -43,6 +50,7 @@ export default function PublicProfilePage() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
+
     Promise.all([
       supabase
         .from("followers")
@@ -80,7 +88,7 @@ export default function PublicProfilePage() {
       .eq("following_id", profile.id)
       .single()
       .then(({ data }) => setIsFollowing(!!data));
-  }, [session, profile]);
+  }, [session?.user?.id, profile?.id]);
 
   if (loading) {
     return (
@@ -89,43 +97,72 @@ export default function PublicProfilePage() {
       </div>
     );
   }
+
   if (!profile) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center text-gray-400">
         <h1 className="text-3xl font-bold mb-4">Usuario no encontrado</h1>
-        <button onClick={() => router.back()} className="text-red-500 underline">Volver</button>
+        <button onClick={() => router.back()} className="text-red-500 underline">
+          Volver
+        </button>
       </div>
     );
   }
+
   const isOwnProfile = session?.user?.id === profile?.id;
-  // Render helpers (idénticos a perfil propio, sin edición ni picker)
+
+  // Render helpers (mismo look que /perfil; en público no abre picker)
   const renderAlbumGrid = () => {
-    const albums = Array.isArray(profile?.top_albums) ? profile.top_albums : [];
+    const albums: TopItem[] = Array.isArray(profile?.top_albums) ? profile.top_albums : [];
     return (
       <div className="grid grid-cols-2 gap-3 mb-4">
-        {[0,1,2,3].map(idx => {
+        {[0, 1, 2, 3].map((idx) => {
           const album = albums[idx];
           return album ? (
-            <div key={idx} className="aspect-square rounded-xl overflow-hidden bg-gray-200 relative">
+            <div key={idx} className="aspect-square rounded-xl overflow-hidden bg-gray-200 relative group">
               <img src={album.image_url} alt={album.title} className="w-full h-full object-cover" />
+              <div className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
+                <button
+                  type="button"
+                  disabled
+                  className="text-white text-3xl font-bold opacity-60"
+                >
+                  ✎
+                </button>
+              </div>
             </div>
           ) : (
-            <div key={idx} className="aspect-square rounded-xl bg-gray-100" />
+            <button
+              key={idx}
+              type="button"
+              disabled
+              className="aspect-square rounded-xl bg-gray-100 flex items-center justify-center text-5xl text-gray-300 border-2 border-dashed border-gray-200"
+            >
+              +
+            </button>
           );
         })}
       </div>
     );
   };
+
   const renderSongList = () => {
-    const songs = Array.isArray(profile?.top_songs) ? profile.top_songs : [];
+    const songs: TopItem[] = Array.isArray(profile?.top_songs) ? profile.top_songs : [];
     return (
       <div className="flex flex-col gap-3">
-        {[0,1,2,3].map(idx => {
+        {[0, 1, 2, 3].map((idx) => {
           const song = songs[idx];
           return song ? (
-            <div key={idx} className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-200 shrink-0">
+            <div key={idx} className="flex items-center gap-3 group">
+              <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-200 shrink-0 relative">
                 <img src={song.image_url} alt={song.title} className="w-full h-full object-cover" />
+                <button
+                  type="button"
+                  disabled
+                  className="absolute inset-0 bg-black/10 opacity-0 group-hover:opacity-100 transition flex items-center justify-center text-white text-xl font-bold"
+                >
+                  ✎
+                </button>
               </div>
               <div className="flex-1">
                 <div className="text-gray-900 font-medium text-base">{song.title}</div>
@@ -133,108 +170,103 @@ export default function PublicProfilePage() {
               </div>
             </div>
           ) : (
-            <div key={idx} className="flex items-center gap-3 w-full">
-              <div className="w-12 h-12 rounded-xl bg-gray-100" />
-              <div className="flex-1 text-gray-400 text-base">&nbsp;</div>
-            </div>
+            <button
+              key={idx}
+              type="button"
+              disabled
+              className="flex items-center gap-3 w-full"
+            >
+              <div className="w-12 h-12 rounded-xl bg-gray-100 flex items-center justify-center text-3xl text-gray-300 border-2 border-dashed border-gray-200">
+                +
+              </div>
+              <div className="flex-1 text-gray-400 text-base">Elegí una canción</div>
+            </button>
           );
         })}
       </div>
     );
   };
+
   return (
     <div className="min-h-screen bg-[#F5F5F7] flex flex-col">
-      {/* Botón volver */}
-      <div className="flex items-center px-4 pt-6 pb-2">
-        <button onClick={() => router.back()} className="text-2xl text-gray-400">×</button>
+      {/* Header (igual a /perfil) */}
+      <div className="flex items-center justify-between px-4 pt-6 pb-2">
+        <button onClick={() => router.back()} className="text-2xl text-gray-400">
+          ×
+        </button>
+        <span className="flex-1 text-center font-bold text-lg text-gray-900">Perfil</span>
+        <button className="text-2xl text-gray-400" type="button" aria-disabled>
+          <FaEllipsisH />
+        </button>
       </div>
-      {/* Header estilo Instagram mobile (foto a la izquierda) */}
-      <div className="flex items-center px-4 mt-2 gap-4">
-        {/* Foto de perfil a la izquierda */}
-        <div className="shrink-0 flex flex-col items-center justify-center">
-          {profile?.avatar_url ? (
-            <img
-              src={profile.avatar_url}
-              alt={profile.username}
-              className="w-20 h-20 rounded-full object-cover shadow"
-            />
-          ) : (
-            <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center text-3xl font-bold text-white">
-              {profile?.username?.charAt(0).toUpperCase() || "U"}
-            </div>
-          )}
+
+      {/* Avatar, nombre y username (igual a /perfil) */}
+      <div className="flex flex-col items-center mt-2 mb-4">
+        {profile?.avatar_url ? (
+          <img
+            src={profile.avatar_url}
+            alt={profile.username}
+            className="w-32 h-32 rounded-full object-cover"
+          />
+        ) : (
+          <div className="w-32 h-32 rounded-full bg-gray-300 flex items-center justify-center text-5xl font-bold text-white">
+            {profile?.username?.charAt(0).toUpperCase() || "U"}
+          </div>
+        )}
+
+        <div className="mt-3 text-2xl font-extrabold text-gray-900">{profile?.full_name || ""}</div>
+        <div className="text-gray-500 text-base">@{profile?.username || "usuario"}</div>
+        {profile?.is_plus && (
+          <span className="mt-2 px-3 py-1 rounded-full bg-[#FB3C4C] text-white text-xs font-bold">
+            Bopp+
+          </span>
+        )}
+
+        {/* Seguir (solo en vista pública) */}
+        {session?.user?.id && !isOwnProfile && profile?.id && (
+          <FollowButton
+            targetUserId={profile.id}
+            currentUserId={session.user.id}
+            initialIsFollowing={isFollowing}
+            initialFollowersCount={followersCount}
+          />
+        )}
+      </div>
+
+      {/* Stats Bar (igual a /perfil) */}
+      <div className="flex items-center justify-center gap-4 px-6 mb-6">
+        <div className="flex-1 text-center">
+          <span className="font-bold text-gray-900">{reviews.length}</span>
+          <span className="text-gray-500 text-xs block">Calificaciones</span>
         </div>
-        {/* Datos y stats a la derecha */}
-        <div className="flex-1 flex flex-col justify-center gap-1">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:gap-3">
-            <div className="text-base font-bold text-gray-900 leading-tight truncate max-w-[180px]">{profile?.full_name || ""}</div>
-            {profile?.is_plus && (
-              <span className="mt-1 sm:mt-0 sm:ml-2 inline-block px-2 py-0.5 rounded-full bg-[#FB3C4C] text-white text-[10px] font-bold">Bopp+</span>
-            )}
-          </div>
-          <div className="text-gray-500 text-xs truncate max-w-[180px]">@{profile?.username || "usuario"}</div>
-          <div className="flex items-center gap-4 mt-1">
-            <div className="flex flex-col items-center">
-              <span className="font-bold text-gray-900 text-sm">{reviews.length}</span>
-              <span className="text-gray-500 text-[10px]">Calificaciones</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="font-bold text-gray-900 text-sm">{followersCount}</span>
-              <span className="text-gray-500 text-[10px]">Seguidores</span>
-            </div>
-            <div className="flex flex-col items-center">
-              <span className="font-bold text-gray-900 text-sm">{followingCount}</span>
-              <span className="text-gray-500 text-[10px]">Siguiendo</span>
-            </div>
-          </div>
+        <div className="w-px h-6 bg-gray-300" />
+        <div className="flex-1 text-center">
+          <span className="font-bold text-gray-900">{followingCount}</span>
+          <span className="text-gray-500 text-xs block">Siguiendo</span>
+        </div>
+        <div className="w-px h-6 bg-gray-300" />
+        <div className="flex-1 text-center">
+          <span className="font-bold text-gray-900">{followersCount}</span>
+          <span className="text-gray-500 text-xs block">Seguidores</span>
         </div>
       </div>
-      {/* Botones debajo del bloque de perfil */}
-      {session?.user?.id && !isOwnProfile && profile?.id && (
-        <div className="flex gap-3 px-4 mt-3 mb-6">
-          <div className="flex-1">
-            <FollowButton
-              targetUserId={profile.id}
-              currentUserId={session.user.id}
-              initialIsFollowing={isFollowing}
-              initialFollowersCount={followersCount}
-            />
-          </div>
-          <button
-            className="flex-1 w-full h-11 px-4 rounded-full font-bold transition border text-sm flex items-center justify-center bg-gray-100 hover:bg-gray-200 text-gray-700 border-gray-200"
-            style={{ minHeight: '2.75rem' }}
-            title="Compartir perfil"
-            onClick={() => {
-              if (navigator.share) {
-                navigator.share({
-                  title: `Perfil de ${profile.full_name || profile.username}`,
-                  url: window.location.href,
-                });
-              } else {
-                navigator.clipboard.writeText(window.location.href);
-                alert('Enlace copiado al portapapeles');
-              }
-            }}
-          >
-            Compartir
-          </button>
-        </div>
-      )}
-      {/* Preferidos */}
+
+      {/* Tus Preferidos (igual a /perfil) */}
       <div className="px-4 mb-6">
         <div className="bg-white rounded-2xl shadow-md p-4 mb-4">
-          <div className="font-bold text-gray-900 mb-1">Preferidos</div>
+          <div className="font-bold text-gray-900 mb-1">Tus Preferidos</div>
           <div className="text-xs text-gray-500 mb-3">Top 4 Álbumes</div>
           {renderAlbumGrid()}
           <div className="text-xs text-gray-500 mb-3">Top 4 Canciones</div>
           {renderSongList()}
         </div>
       </div>
-      {/* Calificaciones */}
+
+      {/* Tus Calificaciones (igual a /perfil) */}
       <div className="px-4 pb-32">
-        <div className="font-bold text-gray-900 mb-3">Calificaciones</div>
+        <div className="font-bold text-gray-900 mb-3">Tus Calificaciones</div>
         {reviews.length === 0 && (
-          <div className="text-gray-400 text-center py-8">Sin calificaciones aún.</div>
+          <div className="text-gray-400 text-center py-8">Aún no has calificado nada.</div>
         )}
         <div className="flex flex-col gap-4">
           {reviews.map((review, idx) => (
@@ -242,6 +274,8 @@ export default function PublicProfilePage() {
           ))}
         </div>
       </div>
+
+      <BottomNav />
     </div>
   );
 }
