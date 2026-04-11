@@ -112,11 +112,7 @@ export default async function TendenciasPage() {
               <div className="font-semibold text-gray-900 line-clamp-1">{item.title}</div>
               <div className="text-sm text-gray-500 line-clamp-1">{item.artist}</div>
             </div>
-            <div className="flex items-center gap-1.5 bg-blue-50 text-blue-700 font-medium px-3 py-1.5 rounded-full text-xs min-w-fit">
-              {/* Icono de ondas/zumbido */}
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3 15s2-2.5 5-2.5 5 2.5 5 2.5 2-2.5 5-2.5 5 2.5 5 2.5" />
-              </svg>
+            <div className="flex items-center bg-blue-50 text-blue-700 font-medium px-3 py-1.5 rounded-full text-xs min-w-fit">
               {item.review_count} {item.review_count === 1 ? 'reseña' : 'reseñas'}
             </div>
           </Link>

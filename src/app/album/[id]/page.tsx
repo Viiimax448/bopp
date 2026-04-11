@@ -171,6 +171,10 @@ export default function AlbumPage() {
         return;
       }
       const user_id = userData.user.id;
+      // Usar metadata del álbum
+      const albumTitle = album?.name || album?.title || '';
+      const albumArtist = album?.artists?.map((a: any) => a.name).join(', ') || album?.artist || '';
+      const albumImage = album?.images?.[0]?.url || null;
       const { error } = await supabase
         .from('reviews')
         .upsert(
@@ -180,6 +184,9 @@ export default function AlbumPage() {
             type: 'album',
             rating: val,
             review_text: "",
+            spotify_title: albumTitle,
+            spotify_artist: albumArtist,
+            spotify_image_url: albumImage,
           },
           { onConflict: 'user_id,spotify_id,type' }
         );

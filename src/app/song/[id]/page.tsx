@@ -134,6 +134,10 @@ export default function SongPage() {
         return;
       }
       const user_id = userData.user.id;
+      // Usar metadata de la canción
+      const songTitle = song?.name || song?.title || '';
+      const songArtist = song?.artists?.map((a: any) => a.name).join(', ') || song?.artist || '';
+      const songImage = song?.album?.images?.[0]?.url || song?.images?.[0]?.url || null;
       const { error } = await supabase
         .from('reviews')
         .upsert(
@@ -143,6 +147,9 @@ export default function SongPage() {
             type: 'song',
             rating: val,
             review_text: "",
+            spotify_title: songTitle,
+            spotify_artist: songArtist,
+            spotify_image_url: songImage,
           },
           { onConflict: 'user_id,spotify_id,type' }
         );
