@@ -138,13 +138,13 @@ export default function FeedReviewCard({
           <div className="text-sm font-black text-gray-900 leading-none mb-0.5 truncate w-full break-words font-sans">
             {review.spotify_title || "Álbum/Canción desconocida"}
           </div>
-          <div className="text-xs text-gray-500 leading-none mb-1.5 truncate w-full break-words font-sans">
+          <p className="text-xs text-gray-500 leading-none mb-0.5 truncate w-full break-words font-sans">
             {review.spotify_artist || ""}
-          </div>
+          </p>
         </div>
 
         {/* Fila calificación + Like */}
-        <div className="flex items-center justify-between mt-1 mb-1.5">
+        <div className="flex items-center justify-between mt-0.5 mb-1.5">
           {/* Estrellas */}
           <div className="flex items-center gap-0.5 text-blue-600 text-xs">
             {[1, 2, 3, 4, 5].map((i) =>
@@ -177,7 +177,7 @@ export default function FeedReviewCard({
 
         {/* Texto de la reseña */}
         {review.review_text?.trim() && (
-          <p className="text-sm text-gray-800 leading-snug w-full break-words mt-0.5">
+          <p className="text-sm text-gray-800 leading-snug w-full break-words mt-1">
             {review.review_text}
           </p>
         )}

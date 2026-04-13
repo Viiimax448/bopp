@@ -54,10 +54,33 @@ export default async function InicioPage() {
     currentUserProfile = profileData ?? null;
   }
 
-  const { data: reviewsData } = await supabase
-    .from("feed_reviews")
-    .select("*, author:profiles(full_name,avatar_url)")
-    .order("created_at", { ascending: false });
+
+  // Obtener los IDs de usuarios seguidos y el propio
+  let followingIds: string[] = [];
+  if (user) {
+    const { data: followingData } = await supabase
+      .from("follows")
+      .select("followed_id")
+      .eq("follower_id", user.id);
+    if (Array.isArray(followingData)) {
+      followingIds = followingData.map((f) => f.followed_id);
+    }
+    followingIds.push(user.id); // Incluir el propio user_id
+  }
+
+  // Feed global: todas las reseñas con datos de perfil anidados
+  const { data: reviewsData, error: reviewsError } = await supabase
+    .from('reviews')
+    .select(`
+      *,
+      profiles (*)
+    `)
+    .order('created_at', { ascending: false })
+    .limit(15);
+
+  if (reviewsError) {
+    console.error('Error fetching reviews:', reviewsError);
+  }
   const reviews = Array.isArray(reviewsData) ? reviewsData : [];
 
   const { data: trendingData } = await supabase
@@ -196,7 +219,7 @@ export default async function InicioPage() {
               <FeedReviewCard
                 key={r.id}
                 review={r}
-                author={r.author}
+                author={r.profiles}
                 timeLabel={timeAgo(r.created_at)}
                 initialIsLiked={r.initialIsLiked}
                 initialLikesCount={r.initialLikesCount}
