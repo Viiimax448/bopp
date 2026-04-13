@@ -510,15 +510,15 @@ export default function AlbumPage() {
 
                   <div className="flex flex-col flex-1 min-w-0">
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-sm font-bold text-gray-900 truncate">{displayName}</span>
-                      <span className="text-[11px] text-gray-600 opacity-80 truncate">
+                      <span className="text-sm font-bold text-current truncate">{displayName}</span>
+                      <span className="text-[11px] text-current opacity-80 truncate">
                         {handle}
                         {time ? ` • ${time}` : ''}
                       </span>
                     </div>
 
                     <div className="flex items-center justify-between mt-1">
-                      <div className="flex items-center gap-0.5 text-blue-600 text-[11px]">
+                      <div className="flex items-center gap-0.5 text-current text-[11px]">
                         {[...Array(5)].map((_, i) =>
                           i < ratingValue ? (
                             <FaStar key={i} className="text-current" />
@@ -529,7 +529,7 @@ export default function AlbumPage() {
                       </div>
 
                       <div
-                        className={`flex items-center gap-1 text-xs hover:text-blue-600 transition-colors cursor-pointer p-1 -mr-1 ${isLiked ? 'text-blue-600' : 'text-gray-600'}`}
+                        className={`flex items-center gap-1 text-xs text-current transition-opacity cursor-pointer p-1 -mr-1 hover:opacity-80 ${isLiked ? 'opacity-100' : 'opacity-70'}`}
                         onClick={() => handleLike(reviewId)}
                         aria-label={isLiked ? 'Quitar like' : 'Dar like'}
                         role="button"
@@ -539,7 +539,7 @@ export default function AlbumPage() {
                       </div>
                     </div>
 
-                    <div className="text-sm text-gray-800 leading-snug mt-1.5 w-full break-words">
+                    <div className="text-sm text-current leading-snug mt-1.5 w-full break-words">
                       {review.review_text || ''}
                     </div>
                   </div>
