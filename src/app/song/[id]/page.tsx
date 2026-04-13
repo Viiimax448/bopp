@@ -392,9 +392,9 @@ export default function SongPage() {
                 <div className="flex items-center gap-1 mt-1">
                   {[...Array(5)].map((_, i) =>
                     i < review.rating ? (
-                      <FaStar key={i} size={16} className="text-[#FB3C4C]" />
+                      <FaStar key={i} size={16} className="text-blue-600" />
                     ) : (
-                      <FaStar key={i} size={16} className="text-[#FB3C4C]/30" />
+                      <FaStar key={i} size={16} className="text-blue-600/30" />
                     )
                   )}
                 </div>

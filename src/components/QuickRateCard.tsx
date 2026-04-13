@@ -139,7 +139,7 @@ export default function QuickRateCard({ item, onOpenModal }: QuickRateCardProps)
           disabled={isSaving}
         >
           {currentRating >= i ? (
-            <FaStar className={`text-[#FB3C4C] text-4xl transition-all ${isSaving ? 'opacity-50' : ''}`} />
+            <FaStar className={`text-blue-600 text-4xl transition-all ${isSaving ? 'opacity-50' : ''}`} />
           ) : (
             <FaRegStar className={`text-gray-300 text-4xl transition-all ${isSaving ? 'opacity-50' : ''}`} />
           )}
@@ -151,7 +151,7 @@ export default function QuickRateCard({ item, onOpenModal }: QuickRateCardProps)
         {stars}
         {isSaving && (
           <span className="absolute right-[-32px] top-1/2 -translate-y-1/2">
-            <svg className="animate-spin h-5 w-5 text-[#FB3C4C]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
             </svg>
@@ -189,7 +189,7 @@ export default function QuickRateCard({ item, onOpenModal }: QuickRateCardProps)
       {/* Botón para añadir reseña */}
       <div className={`transition-all duration-300 ${showButton ? 'opacity-100 mt-4' : 'opacity-0 pointer-events-none mt-0'}`}>
         <button
-          className={`bg-white border border-gray-200 rounded-full px-5 py-2 text-black font-semibold text-base shadow-sm hover:bg-gray-50 focus:outline-none ${saved ? 'border-[#FB3C4C] text-[#FB3C4C]' : ''}`}
+          className={`bg-white border border-gray-200 rounded-full px-5 py-2 text-black font-semibold text-base shadow-sm hover:bg-gray-50 focus:outline-none ${saved ? 'border-blue-600 text-blue-600' : ''}`}
           style={{ minWidth: 180 }}
           onClick={() => onOpenModal(item, currentRating)}
           type="button"

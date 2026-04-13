@@ -25,7 +25,7 @@ function SectionHeader({ title, link }: { title: string; link: string }) {
   return (
     <div className="flex items-center justify-between px-4 mb-2 mt-6">
       <h2 className="text-xl font-bold text-black">{title}</h2>
-      <a href="#" className="text-red-500 text-sm font-medium hover:underline">
+      <a href="#" className="text-blue-600 text-sm font-medium hover:underline">
         {link}
       </a>
     </div>
@@ -118,9 +118,9 @@ export default function InicioTopSections() {
               const stars = [];
               for (let j = 1; j <= 5; j++) {
                 if (stats.average >= j) {
-                  stars.push(<FaStar key={j} className="text-[#FB3C4C]" size={14} />);
+                  stars.push(<FaStar key={j} className="text-blue-600" size={14} />);
                 } else if (stats.average >= j - 0.7) {
-                  stars.push(<FaStarHalfAlt key={j} className="text-[#FB3C4C]" size={14} />);
+                  stars.push(<FaStarHalfAlt key={j} className="text-blue-600" size={14} />);
                 } else {
                   stars.push(<FaRegStar key={j} className="text-gray-200" size={14} />);
                 }

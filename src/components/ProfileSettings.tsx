@@ -70,7 +70,7 @@ export default function ProfileSettings({ open, onClose, profile, onProfileUpdat
               Compartir Perfil
             </button>
             <button
-              className="w-full text-left py-3 px-2 text-red-500 font-medium hover:bg-gray-100 rounded"
+              className="w-full text-left py-3 px-2 text-blue-600 font-medium hover:bg-gray-100 rounded"
               onClick={handleSignOut}
             >
               Cerrar Sesión
@@ -107,10 +107,10 @@ export default function ProfileSettings({ open, onClose, profile, onProfileUpdat
               maxLength={20}
               required
             />
-            {error && <div className="text-red-500 text-sm">{error}</div>}
+            {error && <div className="text-blue-600 text-sm">{error}</div>}
             <button
               type="submit"
-              className="bg-[#FB3C4C] text-white font-bold py-2 rounded disabled:opacity-60"
+              className="bg-blue-600 text-white font-bold py-2 rounded disabled:opacity-60 hover:bg-blue-700"
               disabled={saving}
             >
               Guardar

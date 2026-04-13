@@ -211,7 +211,7 @@ export default function PerfilPage() {
         <div className="mt-3 text-2xl font-extrabold text-gray-900">{profile?.full_name || ""}</div>
         <div className="text-gray-500 text-base">@{profile?.username || "usuario"}</div>
         {profile?.is_plus && (
-          <span className="mt-2 px-3 py-1 rounded-full bg-[#FB3C4C] text-white text-xs font-bold">Bopp+</span>
+          <span className="mt-2 px-3 py-1 rounded-full bg-blue-600 text-white text-xs font-bold">Bopp+</span>
         )}
       </div>
       <ProfileSettings

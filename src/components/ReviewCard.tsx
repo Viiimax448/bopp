@@ -72,7 +72,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
         <div className="flex items-center gap-1 mb-1">
           {[1,2,3,4,5].map(i =>
             i <= review.rating ? (
-              <FaStar key={i} size={16} className="text-[#FB3C4C]" />
+              <FaStar key={i} size={16} className="text-blue-600" />
             ) : (
               <FaRegStar key={i} size={16} className="text-gray-300" />
             )

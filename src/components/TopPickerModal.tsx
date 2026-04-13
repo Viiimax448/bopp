@@ -49,7 +49,7 @@ export default function TopPickerModal({ open, type, onClose, onSelect }: TopPic
         <div className="px-6 pb-2">
           <input
             type="text"
-            className="w-full p-4 bg-gray-100 rounded-xl text-black placeholder-gray-500 outline-none focus:ring-2 focus:ring-[#FB3C4C] text-base"
+            className="w-full p-4 bg-gray-100 rounded-xl text-black placeholder-gray-500 outline-none focus:ring-2 focus:ring-blue-600 text-base"
             placeholder={`Buscar ${type === 'album' ? 'álbum' : 'canción'}...`}
             value={query}
             onChange={e => setQuery(e.target.value)}

@@ -17,7 +17,7 @@ interface ReviewModalProps {
   spotifyImageUrl?: string;
 }
 
-const STAR_COLOR = "#FB3C4C";
+const STAR_COLOR = "#2563EB";
 const BG_COLOR = "#F5F5F7";
 const MAX_LENGTH = { album: 280, song: 100 };
 const PLACEHOLDER = {
@@ -181,7 +181,7 @@ export default function ReviewModal({
             aria-label="Escribe tu reseña"
           />
           <div className="flex justify-end mt-1">
-            <span className={`text-xs ${overLimit ? "text-red-500" : "text-gray-400"}`}>
+            <span className={`text-xs ${overLimit ? "text-blue-600" : "text-gray-400"}`}>
               {text.length}/{charLimit}
             </span>
           </div>
@@ -190,8 +190,8 @@ export default function ReviewModal({
         <div className="fixed left-0 right-0 bottom-0 w-full max-w-md mx-auto px-6 pb-6 pointer-events-none">
           <button
             className={`w-full py-4 rounded-2xl text-lg font-bold shadow-lg pointer-events-auto transition disabled:opacity-50 disabled:cursor-not-allowed
-              ${published ? 'bg-green-500 text-white' : canSubmit ? 'bg-[#FB3C4C] text-white hover:bg-[#e22b3a]' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
-            style={{ boxShadow: "0 4px 24px rgba(251,60,76,0.12)" }}
+              ${published ? 'bg-green-500 text-white' : canSubmit ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
+            style={{ boxShadow: "0 4px 24px rgba(37,99,235,0.12)" }}
             disabled={!canSubmit && !published}
             onClick={canSubmit ? handleSubmit : undefined}
           >
