@@ -1,7 +1,8 @@
 'use client'
 
 
-import { FaRegHeart, FaHeart, FaRegStar, FaStar, FaStarHalfAlt, FaChevronRight } from 'react-icons/fa'
+import { FaRegHeart, FaHeart, FaChevronRight } from 'react-icons/fa'
+import StarRating from '@/components/StarRating';
 import { useParams } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
 import { getColor } from 'colorthief';
@@ -257,7 +258,7 @@ export default function AlbumPage() {
 
   // Guardado automático de rating
   async function handleQuickRate(val: number) {
-    if (val < 1 || val > 5) return;
+    if (val < 0.5 || val > 5 || val % 0.5 !== 0) return;
     setRating(val);
     setIsSaving(true);
     setSaved(false);
@@ -387,20 +388,7 @@ export default function AlbumPage() {
           </h2>
 
           <div className={`flex items-center gap-2 ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>
-            {(() => {
-              const stars = [];
-              let avg = averageRating;
-              for (let i = 1; i <= 5; i++) {
-                if (avg >= i) {
-                  stars.push(<FaStar key={i} className="text-base text-current" />);
-                } else if (avg >= i - 0.5) {
-                  stars.push(<FaStarHalfAlt key={i} className="text-base text-current" />);
-                } else {
-                  stars.push(<FaRegStar key={i} className="text-base text-current" />);
-                }
-              }
-              return stars;
-            })()}
+              <StarRating rating={averageRating} onChange={()=>{}} starSize={20} className="pointer-events-none" />
             <span className="text-sm font-semibold">
               {averageRating.toFixed(1)} • {totalReviews} reseña{totalReviews === 1 ? '' : 's'}
             </span>
@@ -413,22 +401,12 @@ export default function AlbumPage() {
             ¿Qué te pareció este álbum?
           </div>
           <div className="flex gap-3 mb-0 items-center justify-center relative">
-            {[1,2,3,4,5].map((i) => (
-              <button
-                key={i}
-                type="button"
-                className="focus:outline-none"
-                onClick={() => handleQuickRate(i)}
-                aria-label={`Calificar ${i} estrella${i > 1 ? 's' : ''}`}
-                disabled={isSaving}
-              >
-                {rating >= i ? (
-                  <FaStar size={36} className={`${isBackgroundDark ? 'text-white' : 'text-gray-900'} ${isSaving ? 'opacity-50' : ''}`} />
-                ) : (
-                  <FaRegStar size={36} className={`${isBackgroundDark ? 'text-white/40' : 'text-gray-400'} ${isSaving ? 'opacity-50' : ''}`} />
-                )}
-              </button>
-            ))}
+            <StarRating
+              rating={rating}
+              onChange={val => handleQuickRate(val)}
+              starSize={36}
+              className={isSaving ? 'opacity-50 pointer-events-none' : ''}
+            />
             {isSaving && (
               <span className="absolute -right-8 top-1/2 -translate-y-1/2">
                 <svg className={`animate-spin h-5 w-5 ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -468,7 +446,7 @@ export default function AlbumPage() {
                     </div>
                     {stats && stats.count > 0 && (
                       <div className={`flex items-center gap-1 ml-2 text-sm ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>
-                        <FaStar className="text-sm text-current" />
+
                         <span className={`font-bold ${isBackgroundDark ? 'text-white/90' : 'text-gray-900/90'}`}>{stats.average}</span>
                         <span className={`${isBackgroundDark ? 'text-white/50' : 'text-gray-700'} text-xs`}>({stats.count})</span>
                       </div>
@@ -518,15 +496,7 @@ export default function AlbumPage() {
                     </div>
 
                     <div className="flex items-center justify-between mt-1">
-                      <div className="flex items-center gap-0.5 text-current text-[11px]">
-                        {[...Array(5)].map((_, i) =>
-                          i < ratingValue ? (
-                            <FaStar key={i} className="text-current" />
-                          ) : (
-                            <FaRegStar key={i} className="text-current" />
-                          )
-                        )}
-                      </div>
+                      <StarRating rating={ratingValue} onChange={()=>{}} starSize={14} className="pointer-events-none" />
 
                       <div
                         className={`flex items-center gap-1 text-xs text-current transition-opacity cursor-pointer p-1 -mr-1 hover:opacity-80 ${isLiked ? 'opacity-100' : 'opacity-70'}`}
@@ -539,7 +509,7 @@ export default function AlbumPage() {
                       </div>
                     </div>
 
-                    <div className="text-sm text-current leading-snug mt-1.5 w-full break-words">
+                    <div className="text-sm text-current leading-snug mt-1.5 w-full wrap-break-word">
                       {review.review_text || ''}
                     </div>
                   </div>

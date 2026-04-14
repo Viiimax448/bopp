@@ -2,18 +2,19 @@
 'use client'
 
 
-import { useParams, useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import { useEffect, useRef, useState } from 'react'
 import { getColor } from 'colorthief';
-import { useRef } from 'react';
-import { FaArrowLeft, FaEllipsisH, FaRegStar, FaStar, FaStarHalfAlt } from 'react-icons/fa'
+import { FaHeart, FaRegHeart } from 'react-icons/fa'
+// import duplicado eliminado
+import StarRating from '@/components/StarRating';
 import { createBrowserClient } from '@supabase/ssr';
 import ReviewModal from '@/components/ReviewModal';
+import type { User } from '@supabase/supabase-js'
 
 
 export default function SongPage() {
   const params = useParams();
-  const router = useRouter();
   const [song, setSong] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
@@ -27,6 +28,16 @@ export default function SongPage() {
   const [dominantColor, setDominantColor] = useState('#121212');
   const [isBackgroundDark, setIsBackgroundDark] = useState(true);
   const imgRef = useRef<HTMLImageElement>(null);
+
+  const [user, setUser] = useState<User | null>(null);
+  const [likedByReviewId, setLikedByReviewId] = useState<Record<string, boolean>>({});
+
+  const hasUserRating = rating > 0;
+
+  const supabaseClient = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   function extractRgb(input: unknown): [number, number, number] | null {
     if (!input) return null;
@@ -65,11 +76,7 @@ export default function SongPage() {
   // Fetch reviews reales de Supabase y calcular promedio/cantidad
   useEffect(() => {
     if (!params?.id) return;
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-    supabase
+    supabaseClient
       .from('reviews')
       .select('*, rating, profiles(username, full_name, avatar_url)')
       .eq('spotify_id', params.id)
@@ -86,21 +93,109 @@ export default function SongPage() {
           setAverageRating(0);
         }
       });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params?.id, isReviewOpen]);
+
+  useEffect(() => {
+    let isMounted = true;
+    supabaseClient.auth.getUser().then(({ data }) => {
+      if (isMounted) setUser(data?.user ?? null);
+    });
+    return () => { isMounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!user) {
+      setLikedByReviewId({});
+      return;
+    }
+    const reviewIds = (reviews || []).map((r) => r?.id).filter(Boolean);
+    if (!reviewIds.length) {
+      setLikedByReviewId({});
+      return;
+    }
+
+    let cancelled = false;
+    supabaseClient
+      .from('review_likes')
+      .select('review_id')
+      .eq('user_id', user.id)
+      .in('review_id', reviewIds)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        if (error) {
+          // eslint-disable-next-line no-console
+          console.error('Error cargando likes:', error);
+          return;
+        }
+        const next: Record<string, boolean> = {};
+        for (const row of data || []) {
+          if (row?.review_id) next[String(row.review_id)] = true;
+        }
+        setLikedByReviewId(next);
+      });
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, reviews]);
+
+  const handleLike = async (reviewId: string) => {
+    if (!user) {
+      alert('Debes iniciar sesión para dar like.');
+      return;
+    }
+
+    const prevLiked = !!likedByReviewId[reviewId];
+    setLikedByReviewId((prev) => ({ ...prev, [reviewId]: !prevLiked }));
+
+    try {
+      if (!prevLiked) {
+        const { error } = await supabaseClient
+          .from('review_likes')
+          .insert([{ review_id: reviewId, user_id: user.id }]);
+        if (error) throw error;
+      } else {
+        const { error } = await supabaseClient
+          .from('review_likes')
+          .delete()
+          .eq('review_id', reviewId)
+          .eq('user_id', user.id);
+        if (error) throw error;
+      }
+    } catch (err) {
+      setLikedByReviewId((prev) => ({ ...prev, [reviewId]: prevLiked }));
+      // eslint-disable-next-line no-console
+      console.error('Error al actualizar el like:', err);
+      alert('Hubo un error al actualizar el like.');
+    }
+  };
+
+  function formatRelativeTime(input: unknown) {
+    if (!input) return '';
+    const date = new Date(String(input));
+    if (Number.isNaN(date.getTime())) return '';
+
+    const diffMs = Date.now() - date.getTime();
+    const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
+    if (diffMinutes < 60) return `hace ${diffMinutes}m`;
+
+    const diffHours = Math.floor(diffMinutes / 60);
+    if (diffHours < 24) return `hace ${diffHours}h`;
+
+    const diffDays = Math.floor(diffHours / 24);
+    return `hace ${diffDays}d`;
+  }
 
 
   // Al montar, buscar el rating previo del usuario para esta canción
   useEffect(() => {
     let cancelled = false;
     async function fetchUserRating() {
-      const supabase = createBrowserClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-      );
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const { data: userData, error: userError } = await supabaseClient.auth.getUser();
       if (userError || !userData?.user) return;
       const user_id = userData.user.id;
-      const { data, error } = await supabase
+      const { data, error } = await supabaseClient
         .from('reviews')
         .select('rating')
         .eq('user_id', user_id)
@@ -118,16 +213,12 @@ export default function SongPage() {
 
   // Guardado automático de rating
   async function handleQuickRate(val: number) {
-    if (val < 1 || val > 5) return;
+    if (val < 0.5 || val > 5 || val % 0.5 !== 0) return;
     setRating(val);
     setIsSaving(true);
     setSaved(false);
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
     try {
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const { data: userData, error: userError } = await supabaseClient.auth.getUser();
       if (userError || !userData?.user) {
         setIsSaving(false);
         alert('Debes iniciar sesión para calificar.');
@@ -138,7 +229,7 @@ export default function SongPage() {
       const songTitle = song?.name || song?.title || '';
       const songArtist = song?.artists?.map((a: any) => a.name).join(', ') || song?.artist || '';
       const songImage = song?.album?.images?.[0]?.url || song?.images?.[0]?.url || null;
-      const { error } = await supabase
+      const { error } = await supabaseClient
         .from('reviews')
         .upsert(
           {
@@ -269,22 +360,6 @@ export default function SongPage() {
             crossOrigin="anonymous"
           />
         )}
-        {/* Header - Botones blur semitransparente */}
-        <div className="absolute top-4 left-0 w-full flex justify-between items-center px-4 z-10">
-          <button
-            className={`w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-sm transition-colors duration-200 ${isBackgroundDark ? 'bg-white/20' : 'bg-black/10'}`}
-            onClick={() => router.back()}
-            aria-label="Volver"
-          >
-            <FaArrowLeft size={20} className={isBackgroundDark ? 'text-white' : 'text-gray-900'} />
-          </button>
-          <button
-            className={`w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-sm transition-colors duration-200 ${isBackgroundDark ? 'bg-white/20' : 'bg-black/10'}`}
-            aria-label="Menú"
-          >
-            <FaEllipsisH size={20} className={isBackgroundDark ? 'text-white' : 'text-gray-900'} />
-          </button>
-        </div>
         {/* Blend corto entre portada y fondo */}
         <div
           className="pointer-events-none absolute left-0 bottom-0 w-full z-10"
@@ -295,53 +370,38 @@ export default function SongPage() {
             background: `linear-gradient(180deg, transparent 0%, ${dominantColor} 100%)`,
           }}
         />
-        {/* Títulos */}
-        <div className="absolute bottom-0 left-0 w-full px-6 pb-6 z-20">
-          <h1 className={`text-4xl font-extrabold mb-2 drop-shadow-md ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>{songName}</h1>
-          <h2 className={`text-lg font-medium mb-1 drop-shadow-md ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>{artists}</h2>
-          {/* Promedio global de estrellas y cantidad de reseñas */}
-          <div className={`flex items-center gap-2 mt-2 ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>
-            {/* Estrellas visuales promedio */}
-            {(() => {
-              const stars = [];
-              let avg = averageRating;
-              for (let i = 1; i <= 5; i++) {
-                if (avg >= i) {
-                  stars.push(<FaStar key={i} className="text-base text-current" />);
-                } else if (avg >= i - 0.5) {
-                  stars.push(<FaStarHalfAlt key={i} className="text-base text-current" />);
-                } else {
-                  stars.push(<FaRegStar key={i} className="text-base text-current" />);
-                }
-              }
-              return stars;
-            })()}
-            <span className="font-semibold text-base">{averageRating.toFixed(1)}</span>
-            <span className="text-sm">• {totalReviews} reseña{totalReviews === 1 ? '' : 's'}</span>
-          </div>
+        {/* Título (único elemento superpuesto) */}
+        <h1 className={`absolute bottom-0 left-6 text-4xl font-black z-20 ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>
+          {songName}
+        </h1>
+      </div>
+
+      {/* Información debajo de la portada (fuera de la imagen) */}
+      <div className="px-6 pt-0 flex flex-col items-start">
+        <h2 className={`text-lg font-medium mb-0.5 ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>
+          {artists}
+        </h2>
+
+        <div className={`flex items-center gap-2 ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>
+            <StarRating rating={averageRating} onChange={()=>{}} starSize={20} className="pointer-events-none" />
+          <span className="text-sm font-semibold">
+            {averageRating.toFixed(1)} • {totalReviews} reseña{totalReviews === 1 ? '' : 's'}
+          </span>
         </div>
       </div>
 
       {/* Zona de Reseña */}
-      <div className="px-6 pt-8 pb-4">
-        <div className={`text-sm mb-2 ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>¿Qué te pareció esta canción?</div>
-        <div className="flex gap-3 mb-6 items-center relative">
-          {[1,2,3,4,5].map((i) => (
-            <button
-              key={i}
-              type="button"
-              className="focus:outline-none"
-              onClick={() => handleQuickRate(i)}
-              aria-label={`Calificar ${i} estrella${i > 1 ? 's' : ''}`}
-              disabled={isSaving}
-            >
-              {rating >= i ? (
-                <FaStar size={36} className={`${isBackgroundDark ? 'text-white' : 'text-gray-900'} ${isSaving ? 'opacity-50' : ''}`} />
-              ) : (
-                <FaRegStar size={36} className={`${isBackgroundDark ? 'text-white/40' : 'text-gray-400'} ${isSaving ? 'opacity-50' : ''}`} />
-              )}
-            </button>
-          ))}
+      <div className="px-6 pt-8 pb-4 flex flex-col items-center">
+        <div className={`text-sm mb-2 text-center ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>
+          ¿Qué te pareció esta canción?
+        </div>
+        <div className="flex gap-3 mb-0 items-center justify-center relative">
+          <StarRating
+            rating={rating}
+            onChange={val => handleQuickRate(val)}
+            starSize={36}
+            className={isSaving ? 'opacity-50 pointer-events-none' : ''}
+          />
           {isSaving && (
             <span className="absolute -right-8 top-1/2 -translate-y-1/2">
               <svg className={`animate-spin h-5 w-5 ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -350,59 +410,80 @@ export default function SongPage() {
               </svg>
             </span>
           )}
-          {saved && !isSaving && <span className="text-xs text-green-500 ml-2">¡Guardado!</span>}
         </div>
+        {saved && !isSaving && (
+          <div className={`text-xs mt-1 text-center ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>
+            ¡Guardado!
+          </div>
+        )}
         <button
-          className={`w-full py-4 text-lg font-bold rounded-full shadow-md transition mb-8 ${isBackgroundDark ? 'bg-white text-black hover:bg-gray-100' : 'bg-black text-white hover:bg-gray-900'}`}
+          className={`mt-6 py-3 px-6 text-sm font-bold rounded-full shadow-md transition-opacity mb-8 ${isBackgroundDark ? 'bg-white text-black hover:bg-gray-100' : 'bg-black text-white hover:bg-gray-900'} ${hasUserRating ? 'opacity-100' : 'opacity-50'}`}
           onClick={() => setIsReviewOpen(true)}
+          disabled={!hasUserRating}
         >
-          Añadir Reseña (100 ch)
+          Añadir Reseña (opcional)
         </button>
       </div>
 
       {/* Feed Inferior */}
       <div className="px-6 pb-8">
-        <h3 className={`text-base font-semibold mb-4 ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>Hot Takes (100 ch)</h3>
-        <div className="flex flex-col gap-4">
-          {reviews.map((review, idx) => (
-            <div
-              key={idx}
-              className={`rounded-2xl p-4 flex gap-4 items-start backdrop-blur-md ${isBackgroundDark ? 'bg-white/10' : 'bg-black/80'}`}
-            >
-              {review.profiles?.avatar_url ? (
-                <img
-                  src={review.profiles.avatar_url}
-                  alt={review.profiles.full_name || review.profiles.username || 'Usuario'}
-                  className="w-12 h-12 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-12 h-12 rounded-full bg-black/40 flex items-center justify-center text-xl font-bold text-white select-none">
-                  {(review.profiles?.full_name || review.profiles?.username || 'U').charAt(0).toUpperCase()}
+        <h3 className={`text-base font-semibold mb-4 ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>
+          Reseñas
+        </h3>
+        <div className="flex flex-col">
+          {reviews.map((review, idx) => {
+            const displayName = review.profiles?.full_name || review.profiles?.username || 'Usuario';
+            const handle = review.profiles?.username ? `@${review.profiles.username}` : '';
+            const time = formatRelativeTime(review.created_at);
+            const ratingValue = typeof review.rating === 'number' ? review.rating : 0;
+            const reviewId = String(review.id);
+            const isLiked = !!likedByReviewId[reviewId];
+
+            return (
+              <div
+                key={review.id ?? `${review.user_id ?? 'u'}-${idx}`}
+                className="flex flex-row gap-3 py-4 border-b border-black/10"
+              >
+                {review.profiles?.avatar_url ? (
+                  <img
+                    src={review.profiles.avatar_url}
+                    alt={displayName}
+                    className="w-10 h-10 rounded-full shrink-0 object-cover bg-black/5"
+                  />
+                ) : (
+                  <div className="w-10 h-10 rounded-full shrink-0 object-cover bg-black/5" />
+                )}
+
+                <div className="flex flex-col flex-1 min-w-0">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-sm font-bold text-current truncate">{displayName}</span>
+                    <span className="text-[11px] text-current opacity-80 truncate">
+                      {handle}
+                      {time ? ` • ${time}` : ''}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-1">
+                    <StarRating rating={ratingValue} onChange={()=>{}} starSize={14} className="pointer-events-none" />
+
+                    <div
+                      className={`flex items-center gap-1 text-xs text-current transition-opacity cursor-pointer p-1 -mr-1 hover:opacity-80 ${isLiked ? 'opacity-100' : 'opacity-70'}`}
+                      onClick={() => handleLike(reviewId)}
+                      aria-label={isLiked ? 'Quitar like' : 'Dar like'}
+                      role="button"
+                      tabIndex={0}
+                    >
+                      {isLiked ? <FaHeart /> : <FaRegHeart />}
+                    </div>
+                  </div>
+
+                  <div className="text-sm text-current leading-snug mt-1.5 w-full wrap-break-word">
+                    {review.review_text || ''}
+                  </div>
                 </div>
-              )}
-              <div className="flex-1 flex flex-col">
-                {/* Fila 1: Usuario */}
-                <div className="flex items-center mb-0.5">
-                  <span className="font-bold text-white">{review.profiles?.full_name || review.profiles?.username || 'Usuario'}</span>
-                  {review.profiles?.username && (
-                    <span className="text-gray-300 text-sm ml-1">@{review.profiles.username}</span>
-                  )}
-                </div>
-                {/* Fila 2: Estrellas */}
-                <div className="flex items-center gap-1 mt-1">
-                  {[...Array(5)].map((_, i) =>
-                    i < review.rating ? (
-                      <FaStar key={i} size={16} className="text-blue-600" />
-                    ) : (
-                      <FaStar key={i} size={16} className="text-blue-600/30" />
-                    )
-                  )}
-                </div>
-                {/* Fila 3: Texto de la reseña */}
-                <div className="text-white text-sm mt-2">{review.review_text || ''}</div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

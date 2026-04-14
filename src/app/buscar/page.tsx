@@ -4,6 +4,8 @@ import Link from "next/link";
 import { supabase } from "@/utils/supabase/client";
 import { FaSearch, FaChevronRight } from "react-icons/fa";
 import BottomNav from "@/components/BottomNav";
+import UserListItem from "@/components/UserListItem";
+import { createBrowserClient } from "@supabase/ssr";
 
 const TABS = ["Música", "Gente"];
 
@@ -12,7 +14,10 @@ export default function BuscarPage() {
   const [activeTab, setActiveTab] = useState("Música");
   const [results, setResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  // Estado global para seguimiento de usuarios
+  const [followingIds, setFollowingIds] = useState<Set<string>>(new Set());
   const inputRef = useRef<HTMLInputElement>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -44,7 +49,18 @@ export default function BuscarPage() {
     return () => clearTimeout(timeout);
   }, [query, activeTab]);
 
-
+  useEffect(() => {
+    // Obtener usuario logueado
+    const getUser = async () => {
+      const supabase = createBrowserClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+      );
+      const { data } = await supabase.auth.getUser();
+      setCurrentUserId(data?.user?.id || null);
+    };
+    getUser();
+  }, []);
 
   return (
     <div className="bg-white min-h-screen flex flex-col">
@@ -93,36 +109,29 @@ export default function BuscarPage() {
           </div>
         )}
         {/* Resultados Música */}
-        {!isLoading && activeTab === "Música" && results.length > 0 && results.map((item: any) => (
-          <Link
-            key={item.id + item.type}
-            href={`/${item.type === 'track' ? 'song' : 'album'}/${item.id}`}
-            className="flex items-center gap-3 mb-2 p-0.5 px-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition min-h-[3.5rem]"
-          >
-            <img src={item.image} alt={item.title} className="w-12 h-12 rounded-lg object-cover" />
-            <div className="flex-1 min-w-0">
-              <div className="font-bold text-sm text-black truncate">{item.title}</div>
-              <div className="text-xs text-gray-500 truncate">{item.artist}</div>
-              <div className="text-xs text-gray-400 mt-0.5 truncate">{item.type_label}</div>
-            </div>
-            <FaChevronRight className="ml-2 text-xs text-gray-900 opacity-50" />
-          </Link>
-        ))}
+        {!isLoading && activeTab === "Música" && results.length > 0 && results.map((item: any) => {
+          // Determinar label de tipo
+          let tipoLabel = item.type_label || (item.type === 'track' ? 'Canción' : 'Álbum');
+          return (
+            <Link
+              key={item.id + item.type}
+              href={`/${item.type === 'track' ? 'song' : 'album'}/${item.id}`}
+              className="flex items-center gap-3 pt-3"
+            >
+              <img src={item.image} alt={item.title} className="w-12 h-12 rounded-lg object-cover border border-black/10 mr-2" />
+              <div className="flex-1 min-w-0 border-b border-gray-100 pb-3 ml-0.5" style={{marginLeft: '0'}}>
+                <p className="text-sm font-bold text-gray-900 truncate">{item.title}</p>
+                <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                  {item.artist} <span className="mx-1">•</span> {tipoLabel}
+                </p>
+              </div>
+              <FaChevronRight className="ml-2 text-base text-gray-300" />
+            </Link>
+          );
+        })}
         {/* Resultados Gente */}
         {!isLoading && activeTab === "Gente" && results.length > 0 && results.map((user: any) => (
-          <Link key={user.id} href={`/${user.username}`} className="block">
-            <div className="flex items-center gap-3 mb-2 p-0.5 px-2 rounded-xl bg-gray-50 hover:bg-gray-100 transition min-h-[3.5rem]">
-              <img
-                src={user.avatar_url || "/default-avatar.png"}
-                alt={user.username}
-                className="w-10 h-10 rounded-full object-cover" />
-              <div className="flex-1 min-w-0">
-                <div className="font-bold text-sm text-black truncate">{user.username}</div>
-                <div className="text-xs text-gray-400 truncate">{user.full_name || user.email}</div>
-              </div>
-              <FaChevronRight className="ml-2 text-xs text-gray-900 opacity-50" />
-            </div>
-          </Link>
+          <UserListItem key={user.id} user={user} currentUserId={currentUserId} />
         ))}
       </div>
       <BottomNav />

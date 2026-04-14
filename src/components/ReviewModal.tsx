@@ -2,7 +2,7 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { createBrowserClient } from '@supabase/ssr';
-import { FaStar, FaRegStar } from "react-icons/fa";
+import StarRating from './StarRating';
 
 
 interface ReviewModalProps {
@@ -134,7 +134,7 @@ export default function ReviewModal({
       onClick={onClose}
     >
       <div
-        className={`relative w-full max-w-md mx-auto animate-slide-up bg-[${BG_COLOR}] rounded-t-[2rem] pt-4 pb-28 px-6 shadow-xl min-h-[60vh] flex flex-col`}
+        className={`relative w-full max-w-md mx-auto animate-slide-up bg-[${BG_COLOR}] rounded-t-4xl pt-4 pb-28 px-6 shadow-xl min-h-[60vh] flex flex-col`}
         style={{ boxShadow: "0 -8px 32px rgba(0,0,0,0.12)" }}
         onClick={e => e.stopPropagation()}
       >
@@ -155,25 +155,18 @@ export default function ReviewModal({
           </button>
         </div>
         <div className="flex justify-center mb-6">
-          {[1, 2, 3, 4, 5].map((i) =>
-            <button
-              key={i}
-              type="button"
-              className="mx-1 text-5xl focus:outline-none"
-              onClick={() => setRating(i)}
-              onMouseEnter={() => setHover(i)}
-              onMouseLeave={() => setHover(0)}
-              aria-label={`Calificar ${i} estrella${i > 1 ? 's' : ''}`}
-            >
-              { (hover || rating) >= i ? <FaStar color={STAR_COLOR} /> : <FaRegStar color={STAR_COLOR} /> }
-            </button>
-          )}
+          <StarRating
+            rating={rating}
+            onChange={setRating}
+            starSize={40}
+            className="text-blue-600"
+          />
         </div>
         {/* Textarea */}
         <div className="flex-1 flex flex-col">
           <textarea
             ref={textareaRef}
-            className="w-full bg-transparent resize-none text-lg text-gray-900 placeholder-gray-400 outline-none focus:ring-0 border-0 min-h-[120px] max-h-[200px]"
+            className="w-full bg-transparent resize-none text-lg text-gray-900 placeholder-gray-400 outline-none focus:ring-0 border-0 min-h-30 max-h-50"
             placeholder={PLACEHOLDER[type]}
             maxLength={charLimit + 1}
             value={text}
