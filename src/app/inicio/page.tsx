@@ -107,8 +107,8 @@ export default async function InicioPage() {
       </header>
 
       <div className="px-4 mt-2 mb-4">
-        <form action="/buscar" method="get" className="w-full">
-          <div className="relative">
+        <Link href="/buscar" className="block w-full">
+          <div className="relative flex items-center gap-2 pl-10 pr-4 h-12 bg-gray-100 rounded-2xl text-gray-500 cursor-pointer hover:bg-gray-200 transition-colors">
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
               fill="none"
@@ -119,15 +119,9 @@ export default async function InicioPage() {
               <circle cx="11" cy="11" r="8" />
               <line x1="21" y1="21" x2="16.65" y2="16.65" />
             </svg>
-            <input
-              type="text"
-              name="q"
-              placeholder="Busca un álbum, artista o canción..."
-              className="pl-10 pr-4 h-12 w-full bg-gray-100 rounded-2xl text-base text-gray-900 placeholder-gray-400 truncate outline-none border-0"
-              autoComplete="off"
-            />
+            <span className="text-base font-medium text-gray-500 truncate">Buscar música o gente...</span>
           </div>
-        </form>
+        </Link>
       </div>
 
       <div className="flex justify-between items-end px-4 mb-4">

@@ -7,6 +7,7 @@ interface FollowButtonProps {
   currentUserId: string;
   initialIsFollowing: boolean;
   initialFollowersCount: number;
+  className?: string;
 }
 
 export default function FollowButton({
@@ -14,6 +15,7 @@ export default function FollowButton({
   currentUserId,
   initialIsFollowing,
   initialFollowersCount,
+  className,
 }: FollowButtonProps) {
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [loading, setLoading] = useState(false);
@@ -52,7 +54,7 @@ export default function FollowButton({
         isFollowing
           ? "bg-gray-100 text-gray-500 border-gray-300"
           : "bg-blue-600 text-white border-transparent hover:bg-blue-700"
-      } ${loading ? "opacity-60 cursor-not-allowed" : ""}`}
+      } ${loading ? "opacity-60 cursor-not-allowed" : ""} ${className ?? ""}`}
       onClick={handleClick}
       disabled={loading}
     >
