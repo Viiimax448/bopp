@@ -1,18 +1,27 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 
-export default function ProfileSettings({ open, onClose, profile, onProfileUpdate }: {
+export default function ProfileSettings({ open, onClose, profile, onProfileUpdate, startInEdit = false }: {
   open: boolean;
   onClose: () => void;
   profile: any;
   onProfileUpdate: (data: { full_name: string; username: string }) => void;
+  startInEdit?: boolean;
 }) {
-  const [showEdit, setShowEdit] = useState(false);
+  const [showEdit, setShowEdit] = useState(!!startInEdit);
   const [fullName, setFullName] = useState(profile?.full_name || "");
   const [username, setUsername] = useState(profile?.username || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    if (!open) return;
+    setShowEdit(!!startInEdit);
+    setFullName(profile?.full_name || "");
+    setUsername(profile?.username || "");
+    setError("");
+  }, [open, startInEdit, profile?.full_name, profile?.username]);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -45,11 +54,6 @@ export default function ProfileSettings({ open, onClose, profile, onProfileUpdat
     window.location.href = "/login";
   };
 
-  const handleShare = async () => {
-    await navigator.clipboard.writeText(window.location.href);
-    onClose();
-  };
-
   if (!open) return null;
 
   return (
@@ -62,12 +66,6 @@ export default function ProfileSettings({ open, onClose, profile, onProfileUpdat
               onClick={() => setShowEdit(true)}
             >
               Editar Identidad
-            </button>
-            <button
-              className="w-full text-left py-3 px-2 text-gray-900 font-medium hover:bg-gray-100 rounded"
-              onClick={handleShare}
-            >
-              Compartir Perfil
             </button>
             <button
               className="w-full text-left py-3 px-2 text-blue-600 font-medium hover:bg-gray-100 rounded"

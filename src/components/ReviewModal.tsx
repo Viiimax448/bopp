@@ -104,7 +104,7 @@ export default function ReviewModal({
       };
       const { error } = await supabase
         .from('reviews')
-        .upsert(payload, { onConflict: 'user_id,spotify_id,type' });
+        .upsert([payload], { onConflict: 'user_id,spotify_id,type' });
       if (error) {
         console.error(error);
         alert('Ocurrió un error al publicar la reseña.');

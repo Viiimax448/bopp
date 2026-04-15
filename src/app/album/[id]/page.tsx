@@ -280,7 +280,7 @@ export default function AlbumPage() {
       const albumImage = album?.images?.[0]?.url || null;
       const { error } = await supabase
         .from('reviews')
-        .upsert(
+        .upsert([
           {
             user_id,
             spotify_id: params.id,
@@ -290,9 +290,8 @@ export default function AlbumPage() {
             spotify_title: albumTitle,
             spotify_artist: albumArtist,
             spotify_image_url: albumImage,
-          },
-          { onConflict: 'user_id,spotify_id,type' }
-        );
+          }
+        ], { onConflict: 'user_id,spotify_id,type' });
       if (error) {
         alert('Error al guardar la calificación.');
       } else {

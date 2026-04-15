@@ -74,11 +74,11 @@ export default function AvatarUpload({ user, avatarUrl, onAvatarChange }: {
   };
 
   return (
-    <div className="relative group w-48 h-48">
+    <div className="relative group w-36 h-36">
       <img
         src={avatarUrl}
         alt="Avatar"
-        className={`w-48 h-48 rounded-full object-cover shadow-md cursor-pointer transition-opacity ${uploading ? "opacity-60" : ""}`}
+        className={`w-36 h-36 rounded-full object-cover cursor-pointer transition-opacity ${uploading ? "opacity-60" : ""}`}
         onClick={handleClick}
         draggable={false}
       />
@@ -95,7 +95,7 @@ export default function AvatarUpload({ user, avatarUrl, onAvatarChange }: {
         onClick={handleClick}
         style={{ pointerEvents: uploading ? 'none' : 'auto' }}
       >
-        <span className="text-white font-bold text-lg select-none">Cambiar</span>
+        <span className="text-white font-bold text-sm select-none">Cambiar</span>
       </div>
       {uploading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full z-20">

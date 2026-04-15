@@ -103,16 +103,15 @@ export default function QuickRateCard({ item, onOpenModal }: QuickRateCardProps)
       // Guardar rating con review_text null (permitido), nunca guardar si no hay estrella
       const { error } = await supabase
         .from('reviews')
-        .upsert(
+        .upsert([
           {
             user_id,
             spotify_id: item.id,
             type: item.type === 'track' ? 'song' : 'album',
             rating: value,
             review_text: "",
-          },
-          { onConflict: 'user_id,spotify_id,type' }
-        );
+          }
+        ], { onConflict: 'user_id,spotify_id,type' });
       if (error) {
         alert('Error al guardar la calificación.');
       } else {
