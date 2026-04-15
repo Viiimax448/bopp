@@ -63,7 +63,7 @@ export default function BuscarPage() {
   }, []);
 
   return (
-    <div className="bg-white min-h-screen flex flex-col">
+    <div className="bg-[#F5F5F7] min-h-screen flex flex-col">
       {/* Input de búsqueda sticky premium */}
       <div className="sticky top-0 z-10 bg-white px-4 pt-6 pb-2 border-b border-gray-100">
         <div className="flex items-center bg-gray-100 rounded-2xl shadow-sm px-4 py-1.5">
@@ -116,16 +116,20 @@ export default function BuscarPage() {
             <Link
               key={item.id + item.type}
               href={`/${item.type === 'track' ? 'song' : 'album'}/${item.id}`}
-              className="flex items-center gap-3 pt-3"
+              className="flex items-center gap-4 px-5 py-3 border-b border-gray-100 last:border-0 hover:bg-gray-100/80 transition-colors cursor-pointer"
             >
-              <img src={item.image} alt={item.title} className="w-12 h-12 rounded-lg object-cover border border-black/10 mr-2" />
-              <div className="flex-1 min-w-0 border-b border-gray-100 pb-3 ml-0.5" style={{marginLeft: '0'}}>
+              <img
+                src={item.image}
+                alt={item.title}
+                className="w-12 h-12 rounded-md object-cover shrink-0 shadow-sm border border-black/5"
+              />
+              <div className="flex flex-col flex-1 min-w-0">
                 <p className="text-sm font-bold text-gray-900 truncate">{item.title}</p>
-                <p className="text-[11px] text-gray-500 truncate mt-0.5">
+                <p className="text-xs text-gray-500 truncate mt-0.5">
                   {item.artist} <span className="mx-1">•</span> {tipoLabel}
                 </p>
               </div>
-              <FaChevronRight className="ml-2 text-base text-gray-300" />
+              <FaChevronRight className="w-4 h-4 text-gray-300 shrink-0 ml-2" />
             </Link>
           );
         })}

@@ -67,7 +67,7 @@ export default function TendenciasPage() {
   const restOfTrending = trendingData.slice(5, 15);
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F5F5F7]">
       <h1 className="text-2xl font-bold text-gray-800 tracking-tight px-4 pt-6 pb-4 drop-shadow-sm">
         Tendencias globales
       </h1>
@@ -79,8 +79,8 @@ export default function TendenciasPage() {
           onClick={() => setTimeFilter("semana")}
           className={
             timeFilter === "semana"
-              ? "flex-1 py-1.5 bg-white text-gray-900 text-sm font-semibold rounded-lg shadow-sm"
-              : "flex-1 py-1.5 text-gray-500 text-sm font-medium hover:text-gray-700"
+              ? "flex-1 py-1.5 bg-white text-gray-900 text-sm font-semibold rounded-lg shadow-sm border border-gray-200"
+              : "flex-1 py-1.5 bg-gray-50 text-gray-500 text-sm font-medium rounded-lg border border-gray-100 hover:text-gray-700"
           }
         >
           Semana
@@ -90,8 +90,8 @@ export default function TendenciasPage() {
           onClick={() => setTimeFilter("mes")}
           className={
             timeFilter === "mes"
-              ? "flex-1 py-1.5 bg-white text-gray-900 text-sm font-semibold rounded-lg shadow-sm"
-              : "flex-1 py-1.5 text-gray-500 text-sm font-medium hover:text-gray-700"
+              ? "flex-1 py-1.5 bg-white text-gray-900 text-sm font-semibold rounded-lg shadow-sm border border-gray-200"
+              : "flex-1 py-1.5 bg-gray-50 text-gray-500 text-sm font-medium rounded-lg border border-gray-100 hover:text-gray-700"
           }
         >
           Mes
@@ -101,8 +101,8 @@ export default function TendenciasPage() {
           onClick={() => setTimeFilter("total")}
           className={
             timeFilter === "total"
-              ? "flex-1 py-1.5 bg-white text-gray-900 text-sm font-semibold rounded-lg shadow-sm"
-              : "flex-1 py-1.5 text-gray-500 text-sm font-medium hover:text-gray-700"
+              ? "flex-1 py-1.5 bg-white text-gray-900 text-sm font-semibold rounded-lg shadow-sm border border-gray-200"
+              : "flex-1 py-1.5 bg-gray-50 text-gray-500 text-sm font-medium rounded-lg border border-gray-100 hover:text-gray-700"
           }
         >
           Total

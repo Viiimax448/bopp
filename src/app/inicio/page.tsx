@@ -89,7 +89,7 @@ export default async function InicioPage() {
   const trending = Array.isArray(trendingData) ? trendingData : [];
 
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-[#F5F5F7]">
       <header className="flex justify-between items-center px-4 pt-4 pb-2">
         <h1 className="text-3xl font-black text-blue-600 tracking-tighter">Bopp</h1>
         {currentUserProfile && (
@@ -108,7 +108,7 @@ export default async function InicioPage() {
 
       <div className="px-4 mt-2 mb-4">
         <Link href="/buscar" className="block w-full">
-          <div className="relative flex items-center gap-2 pl-10 pr-4 h-12 bg-gray-100 rounded-2xl text-gray-500 cursor-pointer hover:bg-gray-200 transition-colors">
+          <div className="relative flex items-center gap-2 pl-10 pr-4 h-12 bg-white shadow-sm rounded-2xl text-gray-500 cursor-pointer hover:bg-gray-100 transition-colors border border-gray-200">
             <svg
               className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none"
               fill="none"
