@@ -258,7 +258,10 @@ export default function AlbumPage() {
 
   // Guardado automático de rating
   async function handleQuickRate(val: number) {
-    if (val < 0.5 || val > 5 || val % 0.5 !== 0) return;
+    if (typeof val !== 'number' || val < 1 || val > 5) {
+      alert('La calificación debe ser entre 1 y 5.');
+      return;
+    }
     setRating(val);
     setIsSaving(true);
     setSaved(false);
@@ -278,20 +281,22 @@ export default function AlbumPage() {
       const albumTitle = album?.name || album?.title || '';
       const albumArtist = album?.artists?.map((a: any) => a.name).join(', ') || album?.artist || '';
       const albumImage = album?.images?.[0]?.url || null;
+      const payload: any = {
+        user_id,
+        spotify_id: params.id,
+        type: 'album',
+        rating: val,
+        spotify_title: albumTitle,
+        spotify_artist: albumArtist,
+        spotify_image_url: albumImage,
+      };
+      // No enviar review_text si está vacío
+      if (typeof album?.review_text === 'string' && album.review_text.trim().length > 0) {
+        payload.review_text = album.review_text;
+      }
       const { error } = await supabase
         .from('reviews')
-        .upsert([
-          {
-            user_id,
-            spotify_id: params.id,
-            type: 'album',
-            rating: val,
-            review_text: "",
-            spotify_title: albumTitle,
-            spotify_artist: albumArtist,
-            spotify_image_url: albumImage,
-          }
-        ], { onConflict: 'user_id,spotify_id,type' });
+        .upsert([payload], { onConflict: 'user_id,spotify_id,type' });
       if (error) {
         alert('Error al guardar la calificación.');
       } else {

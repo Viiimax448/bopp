@@ -72,8 +72,8 @@ export default function ReviewModal({
 
   // Maneja el submit real a Supabase
   async function handleSubmit() {
-    if (rating === 0) {
-      alert('Debes seleccionar al menos una estrella');
+    if (typeof rating !== 'number' || rating < 1 || rating > 5) {
+      alert('Debes seleccionar una calificación entre 1 y 5 estrellas');
       return;
     }
     setIsSubmitting(true);
@@ -91,20 +91,26 @@ export default function ReviewModal({
         const filtered = hotTakes.filter(ht => ht.take_text && ht.take_text.trim().length > 0);
         if (filtered.length > 0) hot_takes = filtered;
       }
-      const payload = {
+      const payload: any = {
         user_id,
         spotify_id: spotifyId,
         type,
         rating,
-        review_text: text,
         hot_takes,
         spotify_title: title,
         spotify_artist: artist,
         spotify_image_url: spotifyImageUrl || null,
       };
+      if (typeof text === 'string' && text.trim().length > 0) {
+        payload.review_text = text;
+      }
+      console.log('Payload a insertar (ReviewModal):', payload);
       const { error } = await supabase
         .from('reviews')
         .upsert([payload], { onConflict: 'user_id,spotify_id,type' });
+      if (error) {
+        console.error('Error de Supabase (ReviewModal):', error);
+      }
       if (error) {
         console.error(error);
         alert('Ocurrió un error al publicar la reseña.');

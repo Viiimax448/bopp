@@ -67,10 +67,9 @@ export default function QuickRateCard({ item, onOpenModal }: QuickRateCardProps)
           .select('rating')
           .eq('user_id', user_id)
           .eq('spotify_id', item.id)
-          .eq('type', item.type === 'track' ? 'song' : 'album')
-          .single();
-        if (!cancelled && data && typeof data.rating === 'number') {
-          setCurrentRating(data.rating);
+          .eq('type', item.type === 'track' ? 'song' : 'album');
+        if (!cancelled && Array.isArray(data) && data.length > 0 && typeof data[0].rating === 'number') {
+          setCurrentRating(data[0].rating);
           setShowButton(true);
         }
       } catch (e) {
@@ -100,18 +99,25 @@ export default function QuickRateCard({ item, onOpenModal }: QuickRateCardProps)
         return;
       }
       const user_id = userData.user.id;
-      // Guardar rating con review_text null (permitido), nunca guardar si no hay estrella
+      // Solo permitir rating 1-5
+      if (typeof value !== 'number' || value < 1 || value > 5) {
+        setIsSaving(false);
+        alert('La calificación debe ser entre 1 y 5.');
+        return;
+      }
+      const payload = {
+        user_id,
+        spotify_id: item.id,
+        type: item.type === 'track' ? 'song' : 'album',
+        rating: value
+      };
+      console.log('Payload a insertar (QuickRateCard):', payload);
       const { error } = await supabase
         .from('reviews')
-        .upsert([
-          {
-            user_id,
-            spotify_id: item.id,
-            type: item.type === 'track' ? 'song' : 'album',
-            rating: value,
-            review_text: "",
-          }
-        ], { onConflict: 'user_id,spotify_id,type' });
+        .upsert([payload], { onConflict: 'user_id,spotify_id,type' });
+      if (error) {
+        console.error('Error de Supabase (QuickRateCard):', error);
+      }
       if (error) {
         alert('Error al guardar la calificación.');
       } else {
