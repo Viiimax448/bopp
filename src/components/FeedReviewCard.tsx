@@ -17,6 +17,13 @@ export type FeedReview = {
   rating: number;
   review_text: string | null;
   created_at: string;
+  likes_count?: number | null;
+
+  // Estado derivado / relaciones (para el feed)
+  user_has_liked?: boolean;
+  review_likes?: Array<{ user_id: string }>;
+  likes?: Array<{ count: number | string }>;
+
   // Nuevos campos cacheados
   spotify_title?: string | null;
   spotify_artist?: string | null;
@@ -47,6 +54,7 @@ export default function FeedReviewCard({
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [likesCount, setLikesCount] = useState(initialLikesCount);
   const [user, setUser] = useState<User | null>(null);
+  const [isLoadingLike, setIsLoadingLike] = useState(false);
   const supabaseClient = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -57,14 +65,30 @@ export default function FeedReviewCard({
     supabaseClient.auth.getUser().then(({ data }) => {
       if (isMounted) setUser(data?.user ?? null);
     });
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const handleLike = async () => {
-    if (!user) {
-      alert("Debes iniciar sesión para dar like.");
-      return;
+  // Si el parent re-hidrata la review con `user_has_liked`, reflejarlo en UI
+  useEffect(() => {
+    if (typeof review.user_has_liked === "boolean") {
+      setIsLiked(review.user_has_liked);
     }
+  }, [review.user_has_liked]);
+
+  // Recalcular `isLiked` cuando el usuario termina de cargar (evita race en hard reload)
+  useEffect(() => {
+    if (!user?.id) return;
+    if (Array.isArray(review.review_likes)) {
+      const liked = review.review_likes.some((like) => like.user_id === user.id);
+      setIsLiked(liked);
+    }
+  }, [user?.id, review.review_likes]);
+
+  const handleToggleLike = async () => {
+    if (!user || isLoadingLike) return;
+    setIsLoadingLike(true);
     const prevLiked = isLiked;
     const prevCount = likesCount;
     setIsLiked(!prevLiked);
@@ -83,12 +107,24 @@ export default function FeedReviewCard({
           .eq("user_id", user.id);
         if (error) throw error;
       }
-    } catch (err) {
+    } catch (err: any) {
+      // Hack: si intentamos INSERT pero ya existía (23505 / 409), la DB confirma que está liked.
+      if (!prevLiked && (err?.code === "23505" || err?.status === 409)) {
+        // Mantener el estado optimista y corregir silenciosamente.
+        // (No hacemos rollback porque el estado final "liked" ya se cumple.)
+        // eslint-disable-next-line no-console
+        console.warn("El like ya existía. Corrigiendo estado UI...");
+        setIsLiked(true);
+        return;
+      }
+
       setIsLiked(prevLiked);
       setLikesCount(prevCount);
       // eslint-disable-next-line no-console
       console.error("Error al actualizar el like:", err);
       alert("Hubo un error al actualizar el like. Revisa la consola para más detalles.");
+    } finally {
+      setIsLoadingLike(false);
     }
   };
 
@@ -135,10 +171,10 @@ export default function FeedReviewCard({
 
         {/* Fila obra */}
         <div>
-          <div className="text-sm font-black text-gray-900 leading-none mb-0.5 truncate w-full break-words font-sans">
+          <div className="text-sm font-black text-gray-900 leading-none mb-0.5 truncate w-full wrap-break-word font-sans">
             {review.spotify_title || "Álbum/Canción desconocida"}
           </div>
-          <p className="text-xs text-gray-500 leading-none mb-0.5 truncate w-full break-words font-sans">
+          <p className="text-xs text-gray-500 leading-none mb-0.5 truncate w-full wrap-break-word font-sans">
             {review.spotify_artist || ""}
           </p>
         </div>
@@ -156,28 +192,29 @@ export default function FeedReviewCard({
             )}
           </div>
           {/* Botón de Like */}
-          <div
-            className={`flex items-center gap-1 text-xs transition-colors cursor-pointer p-1 -mr-1 rounded-full 
-              ${isLiked ? "text-blue-600 hover:bg-blue-50" : "text-gray-400 hover:text-blue-600 hover:bg-blue-50"}`}
-            onClick={handleLike}
+          <button
+            onClick={handleToggleLike}
+            className="flex items-center gap-1.5 mt-2 group"
+            disabled={isLoadingLike}
             aria-label={isLiked ? "Quitar like" : "Dar like"}
-            role="button"
-            tabIndex={0}
+            type="button"
           >
             {isLiked ? (
-              <FaHeart className="w-4 h-4" />
+              <FaHeart className="w-4 h-4 text-blue-600 scale-110 transition-transform" />
             ) : (
-              <FaRegHeart className="w-4 h-4" />
+              <FaRegHeart className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
             )}
             {likesCount > 0 && (
-              <span className="font-medium">{likesCount}</span>
+              <span className={`text-xs ${isLiked ? 'text-blue-600 font-bold' : 'text-gray-500'}`}>
+                {likesCount}
+              </span>
             )}
-          </div>
+          </button>
         </div>
 
         {/* Texto de la reseña */}
         {review.review_text?.trim() && (
-          <p className="text-sm text-gray-800 leading-snug w-full break-words mt-1">
+          <p className="text-sm text-gray-800 leading-snug w-full wrap-break-word mt-1">
             {review.review_text}
           </p>
         )}

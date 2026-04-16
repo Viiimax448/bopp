@@ -3,6 +3,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "@/utils/supabase/client";
 import { FaSearch, FaChevronRight } from "react-icons/fa";
+import { IoClose } from "react-icons/io5";
 import BottomNav from "@/components/BottomNav";
 import UserListItem from "@/components/UserListItem";
 import { createBrowserClient } from "@supabase/ssr";
@@ -66,27 +67,49 @@ export default function BuscarPage() {
     <div className="bg-[#F5F5F7] min-h-screen flex flex-col">
       {/* Input de búsqueda sticky premium */}
       <div className="sticky top-0 z-10 bg-white px-4 pt-6 pb-2 border-b border-gray-100">
-        <div className="flex items-center bg-gray-100 rounded-2xl shadow-sm px-4 py-1.5">
-          <FaSearch className="text-gray-400 text-base mr-2" />
+        {/* Asumiendo que el valor del input es 'query' y la función 'setQuery' */}
+        <div className="relative w-full">
+          <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
           <input
             ref={inputRef}
             type="text"
-            className="flex-1 bg-transparent text-base font-bold px-0 py-1 rounded-xl outline-none text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-0 border-0"
-            placeholder="Buscar música o gente..."
             value={query}
-            onChange={e => setQuery(e.target.value)}
+            onChange={(e) => setQuery(e.target.value)}
+            spellCheck={false}
+            autoComplete="off"
+            placeholder="Buscar música o gente..."
+            className="w-full bg-white border border-gray-200 rounded-full py-2.5 pl-10 pr-10 text-sm font-medium text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition-all"
             autoFocus
           />
+          {/* Botón X que solo aparece si hay texto */}
+          {query.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                inputRef.current?.focus();
+              }}
+              aria-label="Limpiar búsqueda"
+              className="absolute right-3 top-1/2 -translate-y-1/2 bg-gray-200 hover:bg-gray-300 text-gray-600 rounded-full p-1 transition-colors"
+            >
+              <IoClose className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
+
         {/* Segmented Control / Pills */}
-        <div className="flex w-full bg-gray-100 p-1 rounded-xl mt-4">
-          {TABS.map(tab => (
+        <div className="bg-gray-200/60 p-1 rounded-lg flex items-center w-full mt-4">
+          {TABS.map((tab) => (
             <button
               key={tab}
-              className={`flex-1 text-center py-1 text-xs font-semibold rounded-lg transition-all ${activeTab === tab
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-500 hover:text-gray-700'}`}
               onClick={() => setActiveTab(tab)}
+              className={`
+                flex-1 py-1.5 text-[13px] font-semibold rounded-md transition-all duration-200 ease-out
+                ${activeTab === tab
+                  ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5'
+                  : 'text-gray-500 hover:text-gray-700'
+                }
+              `}
               type="button"
             >
               {tab}
@@ -102,10 +125,12 @@ export default function BuscarPage() {
         )}
         {/* Empty State minimalista */}
         {!isLoading && !query && (
-          <div className="flex flex-col items-center justify-center mt-32 text-center px-4">
-            <FaSearch className="text-6xl text-gray-200 mb-6" />
-            <h2 className="text-xl font-bold text-gray-800 dark:text-white">Busca tu música favorita</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Encuentra canciones, álbumes, artistas o descubre a otros usuarios en Bopp.</p>
+          <div className="flex flex-col items-center justify-center text-center mt-20 px-6">
+            <FaSearch className="w-16 h-16 text-gray-200 mb-4" />
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Busca tu música favorita</h3>
+            <p className="text-sm text-gray-500 max-w-64">
+              Encuentra canciones, álbumes, artistas o descubre a otros usuarios en Bopp.
+            </p>
           </div>
         )}
         {/* Resultados Música */}

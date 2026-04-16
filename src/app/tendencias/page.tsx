@@ -20,7 +20,7 @@ type TrendingItem = {
 };
 
 export default function TendenciasPage() {
-  const [timeFilter, setTimeFilter] = useState<TimeFilter>("semana");
+  const [timeRange, setTimeRange] = useState<TimeFilter>("semana");
   const [trendingData, setTrendingData] = useState<TrendingItem[]>([]);
 
   const supabase = useMemo(
@@ -42,8 +42,8 @@ export default function TendenciasPage() {
       const { data, error } = await supabase
         .from("trending_this_week")
         .select("*")
-        .order("score", { ascending: false })
         .order("review_count", { ascending: false })
+        .order("score", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(15);
 
@@ -61,7 +61,7 @@ export default function TendenciasPage() {
     return () => {
       cancelled = true;
     };
-  }, [supabase, timeFilter]);
+  }, [supabase, timeRange]);
 
   const topFive = trendingData.slice(0, 5);
   const restOfTrending = trendingData.slice(5, 15);
@@ -72,41 +72,23 @@ export default function TendenciasPage() {
         Tendencias globales
       </h1>
 
-      {/* 1. Estado y Filtros de Tiempo */}
-      <div className="flex bg-gray-100 p-1 rounded-xl mx-4 mb-6">
-        <button
-          type="button"
-          onClick={() => setTimeFilter("semana")}
-          className={
-            timeFilter === "semana"
-              ? "flex-1 py-1.5 bg-white text-gray-900 text-sm font-semibold rounded-lg shadow-sm border border-gray-200"
-              : "flex-1 py-1.5 bg-gray-50 text-gray-500 text-sm font-medium rounded-lg border border-gray-100 hover:text-gray-700"
-          }
-        >
-          Semana
-        </button>
-        <button
-          type="button"
-          onClick={() => setTimeFilter("mes")}
-          className={
-            timeFilter === "mes"
-              ? "flex-1 py-1.5 bg-white text-gray-900 text-sm font-semibold rounded-lg shadow-sm border border-gray-200"
-              : "flex-1 py-1.5 bg-gray-50 text-gray-500 text-sm font-medium rounded-lg border border-gray-100 hover:text-gray-700"
-          }
-        >
-          Mes
-        </button>
-        <button
-          type="button"
-          onClick={() => setTimeFilter("total")}
-          className={
-            timeFilter === "total"
-              ? "flex-1 py-1.5 bg-white text-gray-900 text-sm font-semibold rounded-lg shadow-sm border border-gray-200"
-              : "flex-1 py-1.5 bg-gray-50 text-gray-500 text-sm font-medium rounded-lg border border-gray-100 hover:text-gray-700"
-          }
-        >
-          Total
-        </button>
+      {/* Asumiendo que tienes un estado: const [timeRange, setTimeRange] = useState('semana') */}
+      <div className="mx-4 mb-6 mt-2 bg-gray-200/60 p-1 rounded-lg flex items-center">
+        {['semana', 'mes', 'total'].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setTimeRange(tab as TimeFilter)}
+            className={`
+              flex-1 py-1.5 text-[13px] font-semibold rounded-md capitalize transition-all duration-200 ease-out
+              ${timeRange === tab 
+                ? 'bg-white text-gray-900 shadow-sm ring-1 ring-black/5' 
+                : 'text-gray-500 hover:text-gray-700'
+              }
+            `}
+          >
+            {tab}
+          </button>
+        ))}
       </div>
 
       {/* 2. Sección 1: Top 5 en formato Lista */}
@@ -134,13 +116,13 @@ export default function TendenciasPage() {
                 <div className="text-sm font-bold text-gray-900 truncate">{item.spotify_title}</div>
                 <div className="text-xs text-gray-500 truncate">{item.spotify_artist}</div>
               </div>
-              <div className="flex flex-col items-end justify-center shrink-0 ml-2">
-                <div className="flex items-center gap-1 text-xs">
-                  <FaStar className="w-3.5 h-3.5 text-blue-600" />
-                  <span className="font-semibold text-gray-900">{item.score?.toFixed(1) ?? "-"}</span>
+              <div className="flex flex-col items-end shrink-0 ml-2">
+                <div className="flex items-center gap-1 text-sm font-bold text-gray-900">
+                  <FaStar className="w-3.5 h-3.5 text-blue-600" /> {item.score?.toFixed(1) ?? "-"}
                 </div>
-                <span className="text-[10px] text-gray-400 font-medium mt-0.5">
-                  {reviewCount} res
+                {/* Reemplazamos 'res' por el formato '(12)' */}
+                <span className="text-[11.5px] font-medium text-gray-400 mt-0.5">
+                  ({reviewCount})
                 </span>
               </div>
             </Link>
@@ -186,7 +168,7 @@ export default function TendenciasPage() {
               <div className="flex flex-row items-center justify-center gap-1.5 mt-1 w-full">
                 <div className="flex items-center gap-0.5 text-blue-600 font-bold text-[11px]">
                   <svg
-                    className="w-3 h-3 mb-[1px]"
+                    className="w-3 h-3 mb-px"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -195,7 +177,7 @@ export default function TendenciasPage() {
                   <span>{item.score?.toFixed(1) ?? "-"}</span>
                 </div>
                 <span className="text-gray-400 text-[10px] flex items-center">
-                  • {item.review_count ?? 0} res
+                  ({item.review_count ?? 0})
                 </span>
               </div>
             </Link>

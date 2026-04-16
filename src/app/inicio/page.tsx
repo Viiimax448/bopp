@@ -68,12 +68,15 @@ export default async function InicioPage() {
     followingIds.push(user.id); // Incluir el propio user_id
   }
 
-  // Feed global: todas las reseñas con datos de perfil anidados
+
+  // Feed global: todas las reseñas con datos de perfil anidados y likes del usuario actual
   const { data: reviewsData, error: reviewsError } = await supabase
     .from('reviews')
     .select(`
       *,
-      profiles (*)
+      profiles (*),
+      review_likes (user_id),
+      likes:review_likes (count)
     `)
     .order('created_at', { ascending: false })
     .limit(15);
@@ -81,11 +84,44 @@ export default async function InicioPage() {
   if (reviewsError) {
     console.error('Error fetching reviews:', reviewsError);
   }
-  const reviews = Array.isArray(reviewsData) ? reviewsData : [];
+  // Mapear para inyectar user_has_liked
+  const reviews = Array.isArray(reviewsData)
+    ? reviewsData.map((review: any) => {
+        const likeCountFromEmbed =
+          Array.isArray(review.likes) && (typeof review.likes?.[0]?.count === 'number' || typeof review.likes?.[0]?.count === 'string')
+            ? Number(review.likes[0].count)
+            : undefined;
 
-  const { data: trendingData } = await supabase
+        return {
+          ...review,
+          user_has_liked: Array.isArray(review.review_likes)
+            ? review.review_likes.some((like: any) => like.user_id === user?.id)
+            : false,
+          // Preferimos el COUNT real de `review_likes` para que no desaparezca tras recargar.
+          likes_count:
+            typeof likeCountFromEmbed === 'number'
+              ? likeCountFromEmbed
+              : (typeof review.likes_count === 'number'
+                  ? review.likes_count
+                  : (Array.isArray(review.review_likes) ? review.review_likes.length : 0)),
+        };
+      })
+    : [];
+
+  const { data: trendingData, error: trendingError } = await supabase
     .from("trending_this_week")
-    .select("*");
+    .select("*")
+    // 1° CRITERIO: El que tiene más reseñas gana
+    .order("review_count", { ascending: false })
+    // 2° CRITERIO (Desempate): Si tienen la misma cantidad de reseñas, gana el que tiene mejor nota
+    .order("score", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(15);
+
+  if (trendingError) {
+    console.error("Error fetching trending:", trendingError);
+  }
+
   const trending = Array.isArray(trendingData) ? trendingData : [];
 
   return (
@@ -161,7 +197,7 @@ export default async function InicioPage() {
               <div className="flex flex-row items-center justify-center gap-1.5 mt-1 w-full">
                 <div className="flex items-center gap-0.5 text-blue-600 font-bold text-[11px]">
                   <svg
-                    className="w-3 h-3 mb-[1px]"
+                    className="w-3 h-3 mb-px"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -170,7 +206,7 @@ export default async function InicioPage() {
                   <span>{item.score?.toFixed(1) ?? '-'}</span>
                 </div>
                 <span className="text-gray-400 text-[10px] flex items-center">
-                  • {item.review_count} res
+                  ({item.review_count ?? 0})
                 </span>
               </div>
             </Link>
@@ -207,8 +243,8 @@ export default async function InicioPage() {
                 review={r}
                 author={r.profiles}
                 timeLabel={timeAgo(r.created_at)}
-                initialIsLiked={r.initialIsLiked}
-                initialLikesCount={r.initialLikesCount}
+                initialIsLiked={r.user_has_liked}
+                initialLikesCount={r.likes_count}
               />
             ))}
           </div>
