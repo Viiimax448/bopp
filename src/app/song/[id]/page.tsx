@@ -4,7 +4,21 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { getColor } from 'colorthief';
-import { FaHeart, FaRegHeart, FaChevronRight, FaChevronLeft } from 'react-icons/fa';
+import { FaHeart, FaRegHeart, FaChevronRight, FaChevronLeft, FaArrowLeft, FaShareAlt, FaHome } from 'react-icons/fa';
+  // Handler para compartir
+  function handleShare() {
+    if (navigator.share) {
+      navigator.share({
+        title: songName,
+        text: `Escuchá esta canción en Bopp: ${songName} - ${artists}`,
+        url: typeof window !== 'undefined' ? window.location.href : ''
+      });
+    } else {
+      // fallback: copiar al portapapeles
+      navigator.clipboard.writeText(typeof window !== 'undefined' ? window.location.href : '');
+      alert('Enlace copiado al portapapeles');
+    }
+  }
 import { useRouter } from 'next/navigation';
 import StarRating from '@/components/StarRating';
 import { createBrowserClient } from '@supabase/ssr';
@@ -399,6 +413,40 @@ export default function SongPage() {
     >
       {/* Hero Section */}
       <div className="relative w-full h-[50vh]">
+        {/* Botones de acción arriba de la portada */}
+        <div className="absolute top-0 left-0 w-full p-4 flex items-center justify-between z-10">
+          {/* Grupo Izquierdo: Home y Atrás */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => router.push('/')}
+              className={`w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md active:scale-[0.95] transition-all
+                ${isBackgroundDark ? 'bg-white/10' : 'bg-black/10'}
+              `}
+              aria-label="Ir a inicio"
+            >
+              <FaHome className={`w-4 h-4 opacity-90 ${isBackgroundDark ? 'text-white' : 'text-black'}`} />
+            </button>
+            <button
+              onClick={() => router.back()}
+              className={`w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md active:scale-[0.95] transition-all
+                ${isBackgroundDark ? 'bg-white/10' : 'bg-black/10'}
+              `}
+              aria-label="Volver atrás"
+            >
+              <FaArrowLeft className={`w-4 h-4 opacity-90 ${isBackgroundDark ? 'text-white' : 'text-black'}`} />
+            </button>
+          </div>
+          {/* Botón Compartir (Derecha) */}
+          <button
+            onClick={handleShare}
+            className={`w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md active:scale-[0.95] transition-all
+              ${isBackgroundDark ? 'bg-white/10' : 'bg-black/10'}
+            `}
+            aria-label="Compartir"
+          >
+            <FaShareAlt className={`w-4 h-4 opacity-90 ${isBackgroundDark ? 'text-white' : 'text-black'}`} />
+          </button>
+        </div>
         {/* Imagen oculta para extracción de color (Hidden Image Hack) */}
         {imageUrl && (
           <img
@@ -488,7 +536,7 @@ export default function SongPage() {
           <>
             <Link
               href={`/album/${album.id}`}
-              className="w-full flex items-center gap-3 mt-6 p-2.5 rounded-xl hover:bg-black/5 transition-colors border border-black/10"
+              className="w-full flex items-center gap-3 mt-6 p-2.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors border-2 border-black/15 dark:border-white/20"
               style={{ color: 'inherit' }}
             >
               <img
@@ -512,7 +560,7 @@ export default function SongPage() {
                 <button
                   onClick={goToPreviousTrack}
                   disabled={!hasPrevious}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold transition-all border border-black/10 ${hasPrevious ? 'hover:bg-black/5 opacity-80 hover:opacity-100 active:scale-[0.98]' : 'opacity-30 cursor-not-allowed'}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold transition-all border-2 border-black/15 dark:border-white/20 ${hasPrevious ? 'hover:bg-black/5 dark:hover:bg-white/10 opacity-80 hover:opacity-100 active:scale-[0.98]' : 'opacity-30 cursor-not-allowed'}`}
                 >
                   <FaChevronLeft className="w-3 h-3" />
                   Anterior
@@ -520,7 +568,7 @@ export default function SongPage() {
                 <button
                   onClick={goToNextTrack}
                   disabled={!hasNext}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold transition-all border border-black/10 ${hasNext ? 'hover:bg-black/5 opacity-80 hover:opacity-100 active:scale-[0.98]' : 'opacity-30 cursor-not-allowed'}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold transition-all border-2 border-black/15 dark:border-white/20 ${hasNext ? 'hover:bg-black/5 dark:hover:bg-white/10 opacity-80 hover:opacity-100 active:scale-[0.98]' : 'opacity-30 cursor-not-allowed'}`}
                 >
                   Siguiente
                   <FaChevronRight className="w-3 h-3" />
