@@ -1,7 +1,8 @@
 'use client'
 
 
-import { FaRegHeart, FaHeart, FaChevronRight } from 'react-icons/fa'
+import { FaRegHeart, FaHeart, FaChevronRight, FaArrowLeft, FaShareAlt, FaHome } from 'react-icons/fa'
+import { useRouter } from 'next/navigation';
 import StarRating from '@/components/StarRating';
 import { useParams } from 'next/navigation'
 import { useEffect, useState, useRef } from 'react'
@@ -13,6 +14,20 @@ import type { User } from '@supabase/supabase-js'
 
 
 export default function AlbumPage() {
+  const router = useRouter();
+  // Handler para compartir
+  function handleShare() {
+    if (typeof window !== 'undefined' && navigator.share) {
+      navigator.share({
+        title: album?.name || '',
+        text: `Escuchá este álbum en Bopp: ${album?.name || ''} - ${(album?.artists?.[0]?.name || '')}`,
+        url: window.location.href
+      });
+    } else if (typeof window !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(window.location.href);
+      alert('Enlace copiado al portapapeles');
+    }
+  }
   // Fondo dinámico
   const [dominantColor, setDominantColor] = useState('#121212');
   const [isBackgroundDark, setIsBackgroundDark] = useState(true);
@@ -352,6 +367,38 @@ export default function AlbumPage() {
         style={{ backgroundColor: dominantColor, minHeight: '100vh' }}>
         {/* Hero Section */}
         <div className="relative w-full h-[50vh]">
+          {/* Botones Home, Volver y Compartir */}
+          <div className="absolute top-0 left-0 w-full p-4 flex items-center justify-between z-10">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => router.push('/')}
+                className={`w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md active:scale-[0.95] transition-all
+                  ${isBackgroundDark ? 'bg-white/10' : 'bg-black/10'}
+                `}
+                aria-label="Ir a inicio"
+              >
+                <FaHome className={`w-4 h-4 opacity-90 ${isBackgroundDark ? 'text-white' : 'text-black'}`} />
+              </button>
+              <button
+                onClick={() => router.back()}
+                className={`w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md active:scale-[0.95] transition-all
+                  ${isBackgroundDark ? 'bg-white/10' : 'bg-black/10'}
+                `}
+                aria-label="Volver atrás"
+              >
+                <FaArrowLeft className={`w-4 h-4 opacity-90 ${isBackgroundDark ? 'text-white' : 'text-black'}`} />
+              </button>
+            </div>
+            <button
+              onClick={handleShare}
+              className={`w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md active:scale-[0.95] transition-all
+                ${isBackgroundDark ? 'bg-white/10' : 'bg-black/10'}
+              `}
+              aria-label="Compartir"
+            >
+              <FaShareAlt className={`w-4 h-4 opacity-90 ${isBackgroundDark ? 'text-white' : 'text-black'}`} />
+            </button>
+          </div>
           {/* Imagen oculta para extracción de color (Hidden Image Hack) */}
           {album.images?.[0]?.url && (
             <img
@@ -481,7 +528,7 @@ export default function AlbumPage() {
                   <a
                     key={track.id}
                     href={`/song/${track.id}`}
-                    className={`flex items-center px-4 py-3 hover:bg-[#232323] transition rounded`}
+                    className="flex items-center gap-4 p-2.5 sm:p-3 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-black/[0.03] dark:hover:bg-white/[0.05]"
                   >
                     <div className="flex flex-col flex-1 min-w-0">
                       <span className={`font-medium text-base truncate ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>{track.name}</span>

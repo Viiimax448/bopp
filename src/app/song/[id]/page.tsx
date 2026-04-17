@@ -5,20 +5,6 @@ import { useParams } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 import { getColor } from 'colorthief';
 import { FaHeart, FaRegHeart, FaChevronRight, FaChevronLeft, FaArrowLeft, FaShareAlt, FaHome } from 'react-icons/fa';
-  // Handler para compartir
-  function handleShare() {
-    if (navigator.share) {
-      navigator.share({
-        title: songName,
-        text: `Escuchá esta canción en Bopp: ${songName} - ${artists}`,
-        url: typeof window !== 'undefined' ? window.location.href : ''
-      });
-    } else {
-      // fallback: copiar al portapapeles
-      navigator.clipboard.writeText(typeof window !== 'undefined' ? window.location.href : '');
-      alert('Enlace copiado al portapapeles');
-    }
-  }
 import { useRouter } from 'next/navigation';
 import StarRating from '@/components/StarRating';
 import { createBrowserClient } from '@supabase/ssr';
@@ -347,6 +333,23 @@ export default function SongPage() {
     releaseYear = album.release_date ? album.release_date.slice(0, 4) : '';
     imageUrl = album.images?.[0]?.url || song.album?.images?.[0]?.url || song.images?.[0]?.url || null;
     albumId = album.id || '';
+  }
+
+  // Handler para compartir
+  function handleShare() {
+    const url = typeof window !== 'undefined' ? window.location.href : '';
+    if (navigator.share) {
+      navigator.share({
+        title: songName,
+        text: `Escuchá esta canción en Bopp: ${songName} - ${artists}`,
+        url,
+      });
+      return;
+    }
+
+    // fallback: copiar al portapapeles
+    navigator.clipboard.writeText(url);
+    alert('Enlace copiado al portapapeles');
   }
 
   // Navegación rápida entre tracks del álbum
