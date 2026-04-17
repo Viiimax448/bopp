@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import imageCompression from "browser-image-compression";
 import { FiSettings } from "react-icons/fi";
-import { FaCamera, FaPlus, FaHeart, FaRegHeart, FaStar, FaRegStar } from "react-icons/fa";
+import { FaCamera, FaPlus, FaHeart, FaRegHeart, FaStar, FaRegStar, FaCog, FaPencilAlt, FaExchangeAlt } from "react-icons/fa";
 import ProfileSettings from "@/components/ProfileSettings";
 import AvatarUpload from "@/components/AvatarUpload";
 import BottomNav from "@/components/BottomNav";
@@ -86,53 +86,89 @@ function ProfileReviewCard({
     }
   };
 
+  const tipoLabel = review.item_type === 'album' ? 'Álbum' : 'Canción';
   return (
-    <div className="flex gap-4 py-4 border-b border-gray-200 last:border-0">
-      {/* Imagen de la obra */}
-      <img
-        src={review.spotify_image_url || review.image_url || review.image}
-        alt="Portada"
-        className="w-14 h-14 rounded-md object-cover shrink-0 shadow-sm border border-black/5"
-      />
-      {/* Contenedor de Textos */}
-      <div className="flex flex-col flex-1 min-w-0 justify-center">
-        {/* Título y Artista bien compactos */}
-        <p className="text-sm font-bold text-gray-900 truncate">{review.spotify_title || review.title || "Obra Desconocida"}</p>
-        <p className="text-[11px] text-gray-500 truncate leading-tight">{review.spotify_artist || review.artist || "Artista"}</p>
-        {/* Estrellas y Like en la misma línea */}
+    <div className="flex gap-3 sm:gap-4 py-4 border-b border-gray-200 w-full last:border-0 items-start">
+      {/* IZQUIERDA: Portada grande */}
+      <a href={`/${review.item_type || review.type}/${review.item_id || review.spotify_id}`}
+        className="shrink-0 group">
+        <img
+          src={review.image_url || review.spotify_image_url || review.image}
+          className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover shadow-sm border border-black/10 group-hover:opacity-80 transition-opacity"
+          alt={review.title || review.spotify_title || 'Obra'}
+        />
+      </a>
+      {/* DERECHA: Toda la información, texto y botones */}
+      <div className="flex flex-col flex-1 min-w-0 min-h-[5rem] sm:min-h-[6rem]">
+        {/* Título, Artista y Tipo */}
+        <a href={`/${review.item_type || review.type}/${review.item_id || review.spotify_id}`}
+          className="group w-full min-w-0 mb-0.5 block">
+          <h3 className="text-[15.5px] font-bold text-gray-900 leading-tight line-clamp-2 group-hover:underline decoration-gray-900 underline-offset-2">
+            {review.title || review.spotify_title || 'Obra Desconocida'}
+          </h3>
+          <div className="flex items-center gap-1.5 text-[13px] text-gray-700 group-hover:text-gray-900 transition-colors mt-0.5 w-full min-w-0">
+            <span className="truncate shrink min-w-0">{review.artist || review.spotify_artist || 'Artista'}</span>
+            <span className="text-[10px] opacity-70 shrink-0">•</span>
+            <span className="font-medium shrink-0">{tipoLabel}</span>
+          </div>
+        </a>
+        {/* Estrellas y Like condicional si NO hay texto */}
         <div className="flex items-center justify-between mt-1">
           <div className="flex items-center">
             {[1, 2, 3, 4, 5].map((i) =>
               i <= (review.rating || review.score || 0) ? (
-                <FaStar key={i} size={13} className="text-blue-600" />
+                <FaStar key={i} size={15} className="text-blue-600" />
               ) : (
-                <FaRegStar key={i} size={13} className="text-gray-200" />
+                <FaRegStar key={i} size={15} className="text-gray-200" />
               )
             )}
           </div>
-          {/* Botón de Like alineado a la derecha y color Azul Bopp */}
-          <button
-            onClick={handleToggleLike}
-            className="flex items-center gap-1.5 group ml-4"
-            disabled={isLoadingLike || !currentUserId}
-            aria-label={isLiked ? "Quitar like" : "Dar like"}
-            type="button"
-          >
-            {isLiked ? (
-              <FaHeart className="w-4 h-4 text-blue-600 scale-110 transition-transform" />
-            ) : (
-              <FaRegHeart className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
-            )}
-            <span className={`text-[11px] font-bold ${isLiked ? "text-blue-600" : "text-gray-500"}`}>
-              {likesCount > 0 ? likesCount : ""}
-            </span>
-          </button>
+          {/* Like en línea solo si NO hay texto */}
+          {!review.review_text && (
+            <button
+              onClick={handleToggleLike}
+              className="flex items-center gap-1.5 group"
+              disabled={isLoadingLike || !currentUserId}
+              aria-label={isLiked ? "Quitar like" : "Dar like"}
+              type="button"
+            >
+              {isLiked ? (
+                <FaHeart className="w-[18px] h-[18px] text-blue-600 scale-110 transition-transform" />
+              ) : (
+                <FaRegHeart className="w-[18px] h-[18px] text-gray-400 group-hover:text-blue-500 transition-colors" />
+              )}
+              <span className={`text-[13px] font-medium ${isLiked ? 'text-blue-600' : 'text-gray-500'}`}>
+                {likesCount > 0 ? likesCount : ''}
+              </span>
+            </button>
+          )}
         </div>
-        {/* Texto de la reseña */}
+        {/* Texto de la Reseña (dentro de la columna derecha) */}
         {review.review_text && (
-          <p className="text-[13px] text-gray-800 mt-1.5 leading-snug line-clamp-3">
+          <p className="text-[14px] text-gray-900 leading-relaxed mt-2 line-clamp-4">
             {review.review_text}
           </p>
+        )}
+        {/* Footer: Like anclado abajo (SOLO si HAY texto) */}
+        {review.review_text && (
+          <div className="flex justify-end mt-auto pt-2">
+            <button
+              onClick={handleToggleLike}
+              className="flex items-center gap-1.5 group"
+              disabled={isLoadingLike || !currentUserId}
+              aria-label={isLiked ? "Quitar like" : "Dar like"}
+              type="button"
+            >
+              {isLiked ? (
+                <FaHeart className="w-[18px] h-[18px] text-blue-600 scale-110 transition-transform" />
+              ) : (
+                <FaRegHeart className="w-[18px] h-[18px] text-gray-400 group-hover:text-blue-500 transition-colors" />
+              )}
+              <span className={`text-[13px] font-medium ${isLiked ? 'text-blue-600' : 'text-gray-500'}`}>
+                {likesCount > 0 ? likesCount : ''}
+              </span>
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -140,6 +176,9 @@ function ProfileReviewCard({
 }
 
 export default function PerfilPage() {
+    // Estados de edición para secciones
+    const [isEditingAlbums, setIsEditingAlbums] = useState(false);
+    const [isEditingSongs, setIsEditingSongs] = useState(false);
   const router = useRouter();
   const [profile, setProfile] = useState<any>(null);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -420,31 +459,46 @@ export default function PerfilPage() {
       <div className="grid grid-cols-4 gap-2 px-4">
         {[0, 1, 2, 3].map((idx) => {
           const album = albums[idx];
-          return album ? (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => openPicker("album", idx)}
-              className="aspect-square rounded-md overflow-hidden bg-gray-200"
-              aria-label={`Editar álbum favorito ${idx + 1}`}
-            >
-              <img
-                src={album.image_url}
-                alt={album.title}
-                className="w-full aspect-square object-cover rounded-md border border-black/5"
-              />
-            </button>
-          ) : (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => openPicker("album", idx)}
-              className="aspect-square rounded-md bg-gray-100 border border-black/5 flex items-center justify-center"
-              aria-label={`Elegir álbum favorito ${idx + 1}`}
-            >
-              <span className="text-3xl font-bold text-black/20">+</span>
-            </button>
-          );
+          if (album) {
+            return isEditingAlbums ? (
+              // MODO EDICIÓN: Botón para cambiar el álbum
+              <button
+                key={idx}
+                type="button"
+                onClick={() => openPicker("album", idx)}
+                className="relative w-full aspect-square rounded-lg overflow-hidden group border border-black/5"
+                aria-label={`Editar álbum favorito ${idx + 1}`}
+              >
+                <img src={album.image_url} className="w-full h-full object-cover" alt={album.title} />
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px]">
+                  <FaExchangeAlt className="w-5 h-5 text-white opacity-90" />
+                </div>
+              </button>
+            ) : (
+              // MODO VISUALIZACIÓN: Link para navegar al álbum
+              <a
+                key={idx}
+                href={`/album/${album.id}`}
+                className="w-full aspect-square rounded-lg overflow-hidden border border-black/5 hover:opacity-80 transition-opacity block"
+                aria-label={`Ver álbum favorito ${idx + 1}`}
+              >
+                <img src={album.image_url} className="w-full h-full object-cover" alt={album.title} />
+              </a>
+            );
+          } else {
+            // SLOT VACÍO: Botón '+' que siempre abre el buscador
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => openPicker("album", idx)}
+                className="w-full aspect-square rounded-lg border-2 border-dashed border-gray-200 flex items-center justify-center hover:bg-black/5 transition-colors"
+                aria-label={`Elegir álbum favorito ${idx + 1}`}
+              >
+                <FaPlus className="w-6 h-6 text-gray-300" />
+              </button>
+            );
+          }
         })}
       </div>
     );
@@ -457,48 +511,65 @@ export default function PerfilPage() {
         {[0, 1, 2, 3].map((idx) => {
           const song = songs[idx];
           const position = idx + 1;
-
-          return song ? (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => openPicker("track", idx)}
-              className="flex items-center gap-3 px-4 py-2 w-full text-left"
-              aria-label={`Editar canción top ${position}`}
-            >
-              <span className="w-4 text-center text-sm font-bold text-gray-400">{position}</span>
-              <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-200 shrink-0">
-                <img src={song.image_url} alt={song.title} className="w-full h-full object-cover" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-gray-900 font-medium text-sm truncate">{song.title}</div>
-                <div className="text-xs text-gray-500 truncate">{song.artist}</div>
-              </div>
-            </button>
-          ) : (
-            <button
-              key={idx}
-              type="button"
-              onClick={() => openPicker("track", idx)}
-              className="flex items-center gap-4 py-2 cursor-pointer group px-4 w-full text-left"
-              aria-label={`Elegir canción top ${position}`}
-            >
-              {/* Número */}
-              <span className="w-4 text-center text-sm font-bold text-gray-400 shrink-0">{position}</span>
-
-              {/* Cuadro con el + */}
-              <div className="w-12 h-12 rounded-md border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center group-hover:border-gray-300 group-hover:bg-gray-100 transition-all shrink-0">
-                <FaPlus className="w-4 h-4 text-gray-400" />
-              </div>
-
-              {/* Texto de Acción (Reemplazando los skeleton loaders) */}
-              <div className="flex flex-col flex-1">
-                <span className="text-sm font-medium text-gray-400 group-hover:text-gray-600 transition-colors">
-                  Añadir canción
-                </span>
-              </div>
-            </button>
-          );
+          if (song) {
+            return isEditingSongs ? (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => openPicker("track", idx)}
+                className="flex items-center gap-3 px-4 py-2 w-full text-left relative"
+                aria-label={`Editar canción top ${position}`}
+              >
+                <span className="w-4 text-center text-sm font-bold text-gray-400">{position}</span>
+                <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-200 shrink-0 relative">
+                  <img src={song.image_url} alt={song.title} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-[2px]">
+                    <FaExchangeAlt className="w-5 h-5 text-white opacity-90" />
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-gray-900 font-medium text-sm truncate">{song.title}</div>
+                  <div className="text-xs text-gray-500 truncate">{song.artist}</div>
+                </div>
+              </button>
+            ) : (
+              <a
+                key={idx}
+                href={`/track/${song.id}`}
+                className="flex items-center gap-3 px-4 py-2 w-full text-left hover:bg-black/5 rounded transition-colors"
+                aria-label={`Ver canción top ${position}`}
+              >
+                <span className="w-4 text-center text-sm font-bold text-gray-400">{position}</span>
+                <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-200 shrink-0">
+                  <img src={song.image_url} alt={song.title} className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-gray-900 font-medium text-sm truncate">{song.title}</div>
+                  <div className="text-xs text-gray-500 truncate">{song.artist}</div>
+                </div>
+              </a>
+            );
+          } else {
+            return (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => openPicker("track", idx)}
+                className="flex items-center gap-4 py-2 cursor-pointer group px-4 w-full text-left"
+                aria-label={`Elegir canción top ${position}`}
+              >
+                <span className="w-4 text-center text-sm font-bold text-gray-400 shrink-0">{position}</span>
+                <div className="w-12 h-12 rounded-md border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center group-hover:border-gray-300 group-hover:bg-gray-100 transition-all shrink-0">
+                  <FaPlus className="w-4 h-4 text-gray-400" />
+                </div>
+                <div className="flex flex-col flex-1">
+                  <span className="text-sm font-medium text-gray-400 group-hover:text-gray-600 transition-colors">
+                    Añadir canción
+                  </span>
+                </div>
+              </button>
+            );
+          }
         })}
       </div>
     );
@@ -507,13 +578,22 @@ export default function PerfilPage() {
   return (
     <div className="min-h-screen bg-[#F5F5F7] flex flex-col">
       {/* Header (igual a perfiles públicos) */}
-      <div className="flex items-center justify-between px-4 pt-6 pb-2">
-        <button onClick={() => router.back()} className="text-2xl text-gray-400">
-          ×
-        </button>
-        <span className="flex-1 text-center font-bold text-lg text-gray-900">Perfil</span>
-        <div className="w-8" />
-      </div>
+        {/* HEADER DEL PERFIL (Reemplazo Total) */}
+        <div className="relative flex items-center justify-between px-4 py-3 w-full h-16 border-b border-transparent">
+          {/* Izquierda: Logo de Bopp (igual que en inicio) */}
+          <h1 className="text-3xl font-black text-blue-600 tracking-tighter shrink-0 z-10 cursor-pointer">Bopp</h1>
+
+          {/* Centro: Título 'Perfil' (gris muy oscuro, sin dark) */}
+          <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[16px] font-bold text-gray-900 pointer-events-none">Perfil</span>
+
+          {/* Derecha: Botón de Ajustes (gris muy oscuro, sin dark) */}
+          <button 
+            onClick={handleOpenSettings} 
+            className="p-1.5 text-gray-900 hover:bg-black/5 rounded-full active:scale-95 transition-all shrink-0 z-10"
+          >
+            <FaCog className="w-[20px] h-[20px]" />
+          </button>
+        </div>
 
       {/* Header (Avatar y Stats) */}
       <div className="flex flex-col items-center mt-2">
@@ -556,24 +636,14 @@ export default function PerfilPage() {
         </div>
       </div>
 
-      {/* Botones de Acción (perfil propio: editar + configuración) */}
 
-      <div className="flex items-center justify-center gap-2 mt-4 px-6 relative">
+      {/* Zona de Acciones del Perfil */}
+      <div className="flex justify-center mt-4 mb-2 w-full">
         <button
-          type="button"
           onClick={handleOpenEditProfile}
-          className="min-w-30 h-10 px-4 bg-white border border-gray-300 hover:bg-gray-50 text-gray-900 text-sm font-bold rounded-full transition-colors flex items-center justify-center"
+          className="px-6 py-1.5 rounded-full border border-gray-300 text-[14px] font-bold text-gray-900 bg-transparent hover:bg-black/5 transition-colors active:scale-95"
         >
           Editar perfil
-        </button>
-
-        <button
-          type="button"
-          onClick={handleOpenSettings}
-          className="w-10 h-10 shrink-0 flex items-center justify-center bg-white border border-gray-300 rounded-full text-gray-900 hover:bg-gray-50 transition-colors"
-          aria-label="Configuración"
-        >
-          <FiSettings className="w-5 h-5" />
         </button>
       </div>
 
@@ -683,11 +753,35 @@ export default function PerfilPage() {
       />
 
       {/* Título sección Álbumes */}
-      <h3 className="text-sm font-bold text-gray-900 px-4 mt-8 mb-3">Álbumes Favoritos</h3>
+      {/* Header de Álbumes Favoritos */}
+      <div className="flex items-center justify-between mb-3 w-full px-4 mt-8">
+        <h2 className="text-[15px] font-bold text-gray-900">Álbumes Favoritos</h2>
+        {profile?.id === currentUserId && (
+          <button
+            onClick={() => setIsEditingAlbums(!isEditingAlbums)}
+            className={`p-1.5 rounded-full transition-colors ${isEditingAlbums ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'}`}
+            aria-label="Editar álbumes favoritos"
+          >
+            <FaPencilAlt className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
       {renderAlbumGrid()}
 
       {/* Título sección Canciones */}
-      <h3 className="text-sm font-bold text-gray-900 px-4 mt-8 mb-3">Top Canciones</h3>
+      {/* Header de Top Canciones */}
+      <div className="flex items-center justify-between mb-3 w-full px-4 mt-8">
+        <h2 className="text-[15px] font-bold text-gray-900">Top Canciones</h2>
+        {profile?.id === currentUserId && (
+          <button
+            onClick={() => setIsEditingSongs(!isEditingSongs)}
+            className={`p-1.5 rounded-full transition-colors ${isEditingSongs ? 'bg-blue-100 text-blue-600' : 'text-gray-400 hover:bg-gray-100'}`}
+            aria-label="Editar top canciones"
+          >
+            <FaPencilAlt className="w-3.5 h-3.5" />
+          </button>
+        )}
+      </div>
       {renderSongList()}
 
       {/* Reseñas Recientes (Estilo Feed) */}

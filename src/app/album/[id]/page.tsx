@@ -2,6 +2,7 @@
 
 
 import { FaRegHeart, FaHeart, FaChevronRight, FaArrowLeft, FaShareAlt, FaHome } from 'react-icons/fa'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation';
 import StarRating from '@/components/StarRating';
 import { useParams } from 'next/navigation'
@@ -160,13 +161,13 @@ export default function AlbumPage() {
 
     const diffMs = Date.now() - date.getTime();
     const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
-    if (diffMinutes < 60) return `hace ${diffMinutes}m`;
+    if (diffMinutes < 60) return `${diffMinutes}m`;
 
     const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `hace ${diffHours}h`;
+    if (diffHours < 24) return `${diffHours}h`;
 
     const diffDays = Math.floor(diffHours / 24);
-    return `hace ${diffDays}d`;
+    return `${diffDays}d`;
   }
 
   // Fetch álbum info
@@ -220,15 +221,37 @@ export default function AlbumPage() {
     );
     supabase
       .from('reviews')
-      .select('*, rating, profiles(username, full_name, avatar_url)')
+      .select('*, rating, profiles(username, full_name, avatar_url), review_likes(user_id), likes:review_likes(count)')
       .eq('spotify_id', params.id)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
-        setReviews(data || []);
-        if (data && data.length > 0) {
-          setTotalReviews(data.length);
-          const sum = data.reduce((acc, r) => acc + (r.rating || 0), 0);
-          setAverageRating(Math.round((sum / data.length) * 10) / 10);
+        const mapped = Array.isArray(data)
+          ? data.map((review: any) => {
+              const likeCountFromEmbed =
+                Array.isArray(review.likes) &&
+                (typeof review.likes?.[0]?.count === 'number' || typeof review.likes?.[0]?.count === 'string')
+                  ? Number(review.likes[0].count)
+                  : undefined;
+
+              return {
+                ...review,
+                likes_count:
+                  typeof likeCountFromEmbed === 'number'
+                    ? likeCountFromEmbed
+                    : typeof review.likes_count === 'number'
+                      ? review.likes_count
+                      : Array.isArray(review.review_likes)
+                        ? review.review_likes.length
+                        : 0,
+              };
+            })
+          : [];
+
+        setReviews(mapped);
+        if (mapped.length > 0) {
+          setTotalReviews(mapped.length);
+          const sum = mapped.reduce((acc, r) => acc + (r.rating || 0), 0);
+          setAverageRating(Math.round((sum / mapped.length) * 10) / 10);
         } else {
           setTotalReviews(0);
           setAverageRating(0);
@@ -281,15 +304,37 @@ export default function AlbumPage() {
     );
     supabase
       .from('reviews')
-      .select('*, rating, profiles(username, full_name, avatar_url)')
+      .select('*, rating, profiles(username, full_name, avatar_url), review_likes(user_id), likes:review_likes(count)')
       .eq('spotify_id', params.id)
       .order('created_at', { ascending: false })
       .then(({ data }) => {
-        setReviews(data || []);
-        if (data && data.length > 0) {
-          setTotalReviews(data.length);
-          const sum = data.reduce((acc, r) => acc + (r.rating || 0), 0);
-          setAverageRating(Math.round((sum / data.length) * 10) / 10);
+        const mapped = Array.isArray(data)
+          ? data.map((review: any) => {
+              const likeCountFromEmbed =
+                Array.isArray(review.likes) &&
+                (typeof review.likes?.[0]?.count === 'number' || typeof review.likes?.[0]?.count === 'string')
+                  ? Number(review.likes[0].count)
+                  : undefined;
+
+              return {
+                ...review,
+                likes_count:
+                  typeof likeCountFromEmbed === 'number'
+                    ? likeCountFromEmbed
+                    : typeof review.likes_count === 'number'
+                      ? review.likes_count
+                      : Array.isArray(review.review_likes)
+                        ? review.review_likes.length
+                        : 0,
+              };
+            })
+          : [];
+
+        setReviews(mapped);
+        if (mapped.length > 0) {
+          setTotalReviews(mapped.length);
+          const sum = mapped.reduce((acc, r) => acc + (r.rating || 0), 0);
+          setAverageRating(Math.round((sum / mapped.length) * 10) / 10);
         } else {
           setTotalReviews(0);
           setAverageRating(0);
@@ -521,14 +566,18 @@ export default function AlbumPage() {
 
           {/* Lista de canciones del álbum */}
           {album.tracks?.items?.length > 0 && (
-            <div className="mt-2 divide-y divide-gray-700 w-full">
+            <div className="mt-2 w-full max-w-xl mx-auto">
               {album.tracks.items.map((track: any) => {
                 const stats = trackStats[track.id];
                 return (
                   <a
                     key={track.id}
                     href={`/song/${track.id}`}
-                    className="flex items-center gap-4 p-2.5 sm:p-3 rounded-xl cursor-pointer transition-colors duration-200 hover:bg-black/[0.03] dark:hover:bg-white/[0.05]"
+                    className={`flex items-center py-3 border-b last:border-0 w-full transition-colors rounded-none gap-4 cursor-pointer ${
+                      isBackgroundDark
+                        ? 'border-white/10 hover:bg-white/5'
+                        : 'border-black/10 hover:bg-black/5'
+                    }`}
                   >
                     <div className="flex flex-col flex-1 min-w-0">
                       <span className={`font-medium text-base truncate ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>{track.name}</span>
@@ -555,53 +604,94 @@ export default function AlbumPage() {
           <div className="flex flex-col">
             {reviews.map((review, idx) => {
               const displayName = review.profiles?.full_name || review.profiles?.username || 'Usuario';
-              const handle = review.profiles?.username ? `@${review.profiles.username}` : '';
+              const profileUsername = review.profiles?.username ? String(review.profiles.username) : '';
               const time = formatRelativeTime(review.created_at);
               const ratingValue = typeof review.rating === 'number' ? review.rating : 0;
               const reviewId = String(review.id);
               const isLiked = !!likedByReviewId[reviewId];
+              const likesCount = typeof review.likes_count === 'number' ? review.likes_count : Number(review.likes_count) || 0;
+              const hasText = Boolean(String(review.review_text || '').trim());
+
+              const textPrimary = isBackgroundDark ? 'text-white' : 'text-gray-900';
+              const textSecondary = isBackgroundDark ? 'text-white/60' : 'text-gray-500';
+              const borderColor = isBackgroundDark ? 'border-white/10' : 'border-black/10';
+              const heartInactive = isBackgroundDark
+                ? 'text-white/50 group-hover:text-white'
+                : 'text-gray-400 group-hover:text-gray-900';
+              const heartActive = isBackgroundDark ? 'text-white' : 'text-gray-900';
+
+              const avatar = review.profiles?.avatar_url ? (
+                <img
+                  src={review.profiles.avatar_url}
+                  alt={displayName}
+                  className="w-10 h-10 rounded-full object-cover border border-black/5"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-black/5" />
+              );
 
               return (
                 <div
                   key={review.id ?? `${review.user_id ?? 'u'}-${idx}`}
-                  className="flex flex-row gap-3 py-4 border-b border-black/10"
+                  className={`flex gap-3 py-4 border-b w-full last:border-0 items-start ${borderColor}`}
                 >
-                  {review.profiles?.avatar_url ? (
-                    <img
-                      src={review.profiles.avatar_url}
-                      alt={displayName}
-                      className="w-10 h-10 rounded-full shrink-0 object-cover bg-black/5"
-                    />
+                  {profileUsername ? (
+                    <Link href={`/${profileUsername}`} className="shrink-0">
+                      {avatar}
+                    </Link>
                   ) : (
-                    <div className="w-10 h-10 rounded-full shrink-0 object-cover bg-black/5" />
+                    <div className="shrink-0">{avatar}</div>
                   )}
 
                   <div className="flex flex-col flex-1 min-w-0">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="text-sm font-bold text-current truncate">{displayName}</span>
-                      <span className="text-[11px] text-current opacity-80 truncate">
-                        {handle}
-                        {time ? ` • ${time}` : ''}
-                      </span>
+                    <div className="flex items-center gap-2 mb-0.5 min-w-0">
+                      <span className={`font-bold text-[14.5px] truncate ${textPrimary}`}>{displayName}</span>
+                      {time ? <span className={`text-[13px] ${textSecondary}`}>{time}</span> : null}
                     </div>
 
-                    <div className="flex items-center justify-between mt-1">
+                    <div className="flex items-center justify-between mt-0.5">
                       <StarRating rating={ratingValue} onChange={()=>{}} starSize={14} className="pointer-events-none" />
 
-                      <div
-                        className={`flex items-center gap-1 text-xs text-current transition-opacity cursor-pointer p-1 -mr-1 hover:opacity-80 ${isLiked ? 'opacity-100' : 'opacity-70'}`}
-                        onClick={() => handleLike(reviewId)}
-                        aria-label={isLiked ? 'Quitar like' : 'Dar like'}
-                        role="button"
-                        tabIndex={0}
-                      >
-                        {isLiked ? <FaHeart /> : <FaRegHeart />}
-                      </div>
+                      {!hasText ? (
+                        <button
+                          type="button"
+                          onClick={() => handleLike(reviewId)}
+                          className="flex items-center gap-1.5 group"
+                          aria-label={isLiked ? 'Quitar like' : 'Dar like'}
+                        >
+                          {isLiked ? (
+                            <FaHeart className={`w-[17px] h-[17px] ${heartActive}`} />
+                          ) : (
+                            <FaRegHeart className={`w-[17px] h-[17px] ${heartInactive}`} />
+                          )}
+                          <span className={`text-[13px] ${textSecondary}`}>{likesCount}</span>
+                        </button>
+                      ) : null}
                     </div>
 
-                    <div className="text-sm text-current leading-snug mt-1.5 w-full wrap-break-word">
-                      {review.review_text || ''}
-                    </div>
+                    {hasText ? (
+                      <p className={`text-[14.5px] leading-relaxed mt-1.5 ${isBackgroundDark ? 'text-white/90' : 'text-gray-800'}`}>
+                        {review.review_text}
+                      </p>
+                    ) : null}
+
+                    {hasText ? (
+                      <div className="flex justify-end mt-2">
+                        <button
+                          type="button"
+                          onClick={() => handleLike(reviewId)}
+                          className="flex items-center gap-1.5 group"
+                          aria-label={isLiked ? 'Quitar like' : 'Dar like'}
+                        >
+                          {isLiked ? (
+                            <FaHeart className={`w-[17px] h-[17px] ${heartActive}`} />
+                          ) : (
+                            <FaRegHeart className={`w-[17px] h-[17px] ${heartInactive}`} />
+                          )}
+                          <span className={`text-[13px] ${textSecondary}`}>{likesCount}</span>
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
               );

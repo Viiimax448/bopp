@@ -3,7 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import { FaEllipsisH, FaRegStar, FaStar, FaStarHalfAlt, FaHeart, FaRegHeart } from "react-icons/fa";
+import { FaEllipsisH, FaRegStar, FaStar, FaStarHalfAlt, FaHeart, FaRegHeart, FaArrowLeft } from "react-icons/fa";
+
+import Link from "next/link";
 
 import BottomNav from "@/components/BottomNav";
 import FollowButton from "@/components/FollowButton";
@@ -227,15 +229,55 @@ export default function PublicProfilePage() {
     );
   };
 
+  // Álbumes y canciones para mapeo
+  const favoriteAlbums: Array<TopItem | undefined> = Array.isArray(profile?.top_albums)
+    ? (profile.top_albums as Array<TopItem | undefined>)
+    : [];
+  const topSongs: Array<TopItem | undefined> = Array.isArray(profile?.top_songs)
+    ? (profile.top_songs as Array<TopItem | undefined>)
+    : [];
+
   return (
     <div className="min-h-screen bg-[#F5F5F7] flex flex-col">
-      {/* Header (igual a /perfil) */}
-      <div className="flex items-center justify-between px-4 pt-6 pb-2">
-        <button onClick={() => router.back()} className="text-2xl text-gray-400">
-          ×
+      {/* HEADER DEL PERFIL PÚBLICO */}
+      <div className="relative flex items-center justify-between px-4 py-3 w-full h-14 border-b border-transparent">
+        {/* Izquierda: Botón Volver (Back) */}
+        <button 
+          onClick={() => router.back()}
+          className="p-1.5 text-gray-900 hover:bg-black/5 rounded-full active:scale-95 transition-all shrink-0 z-10"
+        >
+          <FaArrowLeft className="w-5 h-5" />
         </button>
-        <span className="flex-1 text-center font-bold text-lg text-gray-900">Perfil</span>
-        <div className="w-8" />
+
+        {/* Centro: Username del Perfil */}
+        <h1 className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[16px] font-bold text-gray-900 pointer-events-none truncate max-w-[50%]">
+          {profile.username}
+        </h1>
+
+        {/* Derecha: Menú de Opciones */}
+        <button 
+          onClick={() => setIsShareMenuOpen(!isShareMenuOpen)}
+          className="p-1.5 text-gray-900 hover:bg-black/5 rounded-full active:scale-95 transition-all shrink-0 z-10"
+          aria-label="Opciones de compartir"
+        >
+          <FaEllipsisH className="w-5 h-5" />
+        </button>
+        {/* Menú desplegable */}
+        {isShareMenuOpen && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setIsShareMenuOpen(false)}></div>
+            <div className="absolute right-0 top-14 mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
+              <div className="flex flex-col">
+                <button onClick={handleNativeShare} className="px-4 py-3 text-sm font-medium text-left text-gray-700 hover:bg-gray-50 border-b border-gray-50">
+                  Compartir perfil
+                </button>
+                <button onClick={handleCopyLink} className="px-4 py-3 text-sm font-medium text-left text-gray-700 hover:bg-gray-50">
+                  Copiar enlace
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Header (Avatar y Stats) */}
@@ -279,91 +321,82 @@ export default function PublicProfilePage() {
         </div>
       </div>
 
-      {/* Botones de Acción refinados */}
-      <div className="flex items-center justify-center gap-2 mt-4 px-6 relative">
+      {/* ZONA DE ACCIONES DEL PERFIL */}
+      <div className="flex justify-center mt-4 mb-2 w-full">
         {session?.user?.id && !isOwnProfile && profile?.id ? (
-          <FollowButton
-            targetUserId={profile.id}
-            currentUserId={session.user.id}
-            initialIsFollowing={isFollowing}
-            initialFollowersCount={followersCount}
-            className="flex-1 max-w-[200px] h-10 py-0 my-0 bg-blue-600 text-white font-bold rounded-full"
-          />
-        ) : (
-          <div className="flex-1 max-w-[200px] h-10" />
-        )}
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setIsShareMenuOpen(!isShareMenuOpen)}
-            className="w-10 h-10 shrink-0 flex items-center justify-center bg-gray-100 rounded-full hover:bg-gray-200 text-gray-700 transition-colors"
-            aria-label="Opciones de compartir"
-          >
-            <FaEllipsisH />
-          </button>
-          {isShareMenuOpen && (
-            <>
-              {/* Overlay invisible para cerrar al hacer clic afuera */}
-              <div className="fixed inset-0 z-40" onClick={() => setIsShareMenuOpen(false)}></div>
-              {/* Menú */}
-              <div className="absolute right-6 top-14 mt-1 w-48 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
-                <div className="flex flex-col">
-                  <button onClick={handleNativeShare} className="px-4 py-3 text-sm font-medium text-left text-gray-700 hover:bg-gray-50 border-b border-gray-50">
-                    Compartir perfil
-                  </button>
-                  <button onClick={handleCopyLink} className="px-4 py-3 text-sm font-medium text-left text-gray-700 hover:bg-gray-50">
-                    Copiar enlace
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-        </div>
+          isFollowing ? (
+            <button 
+              onClick={() => setIsFollowing(false)}
+              className="px-8 py-1.5 rounded-full border border-gray-300 text-[14px] font-bold text-gray-900 bg-transparent hover:bg-black/5 transition-colors active:scale-95"
+            >
+              Siguiendo
+            </button>
+          ) : (
+            <button 
+              onClick={() => setIsFollowing(true)}
+              className="px-8 py-1.5 rounded-full text-[14px] font-bold text-white bg-gray-900 hover:opacity-90 transition-opacity active:scale-95"
+            >
+              Seguir
+            </button>
+          )
+        ) : null}
       </div>
 
       {/* Título sección Álbumes */}
       <h3 className="text-sm font-bold text-gray-900 px-4 mt-8 mb-3">Álbumes Favoritos</h3>
-      {/* Top Álbumes (Mosaico refinado) */}
-      <div className="grid grid-cols-4 gap-2 px-4">
-        {(Array.isArray(profile?.top_albums) ? profile.top_albums : []).map((album: TopItem | undefined, idx: number) => (
+      {/* Mapeo de Álbumes Favoritos en Perfil Público */}
+      <div className="grid grid-cols-4 gap-2 sm:gap-3 w-full px-4">
+        {favoriteAlbums.map((album, index) => (
           album ? (
-            <div key={idx} className="aspect-square rounded-md overflow-hidden bg-gray-200">
-              <img src={album.image_url} alt={album.title} className="w-full aspect-square object-cover rounded-md border border-black/5" />
-            </div>
+            <Link 
+              key={index}
+              href={`/album/${album.id}`}
+              className="w-full aspect-square rounded-lg overflow-hidden border border-black/5 hover:opacity-80 transition-opacity"
+            >
+              <img src={album.image_url} alt={album.title} className="w-full h-full object-cover" />
+            </Link>
           ) : (
-            <div key={idx} className="aspect-square rounded-md bg-gray-100 border border-black/5" />
+            <div 
+              key={index}
+              className="w-full aspect-square rounded-lg border-2 border-dashed border-gray-100 bg-gray-50 flex items-center justify-center opacity-50"
+            />
           )
         ))}
       </div>
 
       {/* Título sección Canciones */}
       <h3 className="text-sm font-bold text-gray-900 px-4 mt-8 mb-3">Top Canciones</h3>
-      {/* Top Canciones (Lista refinada) */}
-      <div>
-        {(Array.isArray(profile?.top_songs) ? profile.top_songs : []).map((song: TopItem | undefined, idx: number) => {
-          const position = idx + 1;
-          return song ? (
-            <div key={idx} className="flex items-center gap-3 px-4 py-2">
-              <span className="w-4 text-center text-sm font-bold text-gray-400">{position}</span>
-              <div className="w-12 h-12 rounded-md overflow-hidden bg-gray-200 shrink-0">
-                <img src={song.image_url} alt={song.title} className="w-full h-full object-cover" />
+      {/* Mapeo de Top Canciones en Perfil Público */}
+      <div className="flex flex-col gap-3 w-full px-4">
+        {topSongs.map((song, index) => (
+          song ? (
+            <Link 
+              key={index}
+              href={`/cancion/${song.id}`}
+              className="flex items-center gap-3 w-full group hover:bg-black/5 p-1 -ml-1 rounded-lg transition-colors"
+            >
+              <span className="text-[13px] font-bold text-gray-400 w-4 text-center shrink-0">
+                {index + 1}
+              </span>
+              <img src={song.image_url} alt={song.title} className="w-10 h-10 rounded-md object-cover border border-black/5 shrink-0" />
+              <div className="flex flex-col min-w-0">
+                <span className="text-[14px] font-bold text-gray-900 truncate group-hover:underline">
+                  {song.title}
+                </span>
+                <span className="text-[13px] text-gray-500 truncate">
+                  {song.artist}
+                </span>
               </div>
-              <div className="flex-1 min-w-0">
-                <div className="text-gray-900 font-medium text-sm truncate">{song.title}</div>
-                <div className="text-xs text-gray-500 truncate">{song.artist}</div>
-              </div>
-            </div>
+            </Link>
           ) : (
-            <div key={idx} className="flex items-center gap-3 px-4 py-2">
-              <span className="w-4 text-center text-sm font-bold text-gray-400">{position}</span>
-              <div className="w-12 h-12 rounded-md bg-gray-100 shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="h-4 w-28 bg-black/5 rounded" />
-                <div className="h-3 w-20 bg-black/5 rounded mt-2" />
-              </div>
+            <div key={index} className="flex items-center gap-3 w-full opacity-50 p-1">
+              <span className="text-[13px] font-bold text-gray-400 w-4 text-center shrink-0">
+                {index + 1}
+              </span>
+              <div className="w-10 h-10 rounded-md border-2 border-dashed border-gray-200 shrink-0" />
             </div>
-          );
-        })}
+          )
+        ))}
       </div>
 
       {/* Reseñas Recientes (Estilo Feed) */}
@@ -462,53 +495,86 @@ function PublicProfileReviewCard({
     }
   };
 
+  const tipoLabel = review.item_type === 'album' ? 'Álbum' : 'Canción';
   return (
-    <div className="flex gap-4 py-4 border-b border-gray-200 last:border-0">
-      {/* Imagen de la obra */}
+    <div className="flex gap-3 sm:gap-4 py-4 border-b border-gray-200 w-full last:border-0 items-start">
+      {/* IZQUIERDA: Portada grande */}
       <img
-        src={review.spotify_image_url || review.image_url || review.image}
-        alt="Portada"
-        className="w-14 h-14 rounded-md object-cover shrink-0 shadow-sm border border-black/5"
+        src={review.image_url || review.spotify_image_url || review.image}
+        alt={review.title || review.spotify_title || 'Obra'}
+        className="w-20 h-20 sm:w-24 sm:h-24 rounded-lg object-cover shadow-sm border border-black/10 group-hover:opacity-80 transition-opacity shrink-0"
       />
-      {/* Contenedor de Textos */}
-      <div className="flex flex-col flex-1 min-w-0 justify-center">
-        {/* Título y Artista bien compactos */}
-        <p className="text-sm font-bold text-gray-900 truncate">{review.spotify_title || review.title || "Obra Desconocida"}</p>
-        <p className="text-[11px] text-gray-500 truncate leading-tight">{review.spotify_artist || review.artist || "Artista"}</p>
-        {/* Estrellas y Like en la misma línea */}
+      {/* DERECHA: Toda la información, texto y botones */}
+      <div className="flex flex-col flex-1 min-w-0 min-h-[5rem] sm:min-h-[6rem]">
+        {/* Título, Artista y Tipo */}
+        <a href={`/${review.item_type || review.type}/${review.item_id || review.spotify_id}`}
+          className="group w-full min-w-0 mb-0.5 block">
+          <h3 className="text-[15.5px] font-bold text-gray-900 leading-tight line-clamp-2 group-hover:underline decoration-gray-900 underline-offset-2">
+            {review.title || review.spotify_title || 'Obra Desconocida'}
+          </h3>
+          <div className="flex items-center gap-1.5 text-[13px] text-gray-700 group-hover:text-gray-900 transition-colors mt-0.5 w-full min-w-0">
+            <span className="truncate shrink min-w-0">{review.artist || review.spotify_artist || 'Artista'}</span>
+            <span className="text-[10px] opacity-70 shrink-0">•</span>
+            <span className="font-medium shrink-0">{tipoLabel}</span>
+          </div>
+        </a>
+        {/* Estrellas y Like condicional si NO hay texto */}
         <div className="flex items-center justify-between mt-1">
           <div className="flex items-center">
             {[1, 2, 3, 4, 5].map((i) =>
               i <= (review.rating || review.score || 0) ? (
-                <FaStar key={i} size={13} className="text-blue-600" />
+                <FaStar key={i} size={15} className="text-blue-600" />
               ) : (
-                <FaRegStar key={i} size={13} className="text-gray-200" />
+                <FaRegStar key={i} size={15} className="text-gray-200" />
               )
             )}
           </div>
-          {/* Botón de Like alineado a la derecha y color Azul Bopp */}
-          <button
-            onClick={handleToggleLike}
-            className="flex items-center gap-1.5 group ml-4"
-            disabled={isLoadingLike || !currentUserId}
-            aria-label={isLiked ? "Quitar like" : "Dar like"}
-            type="button"
-          >
-            {isLiked ? (
-              <FaHeart className="w-4 h-4 text-blue-600 scale-110 transition-transform" />
-            ) : (
-              <FaRegHeart className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
-            )}
-            <span className={`text-[11px] font-bold ${isLiked ? "text-blue-600" : "text-gray-500"}`}>
-              {likesCount > 0 ? likesCount : ""}
-            </span>
-          </button>
+          {/* Like en línea solo si NO hay texto */}
+          {!review.review_text && (
+            <button
+              onClick={handleToggleLike}
+              className="flex items-center gap-1.5 group"
+              disabled={isLoadingLike || !currentUserId}
+              aria-label={isLiked ? "Quitar like" : "Dar like"}
+              type="button"
+            >
+              {isLiked ? (
+                <FaHeart className="w-[18px] h-[18px] text-blue-600 scale-110 transition-transform" />
+              ) : (
+                <FaRegHeart className="w-[18px] h-[18px] text-gray-400 group-hover:text-blue-500 transition-colors" />
+              )}
+              <span className={`text-[13px] font-medium ${isLiked ? 'text-blue-600' : 'text-gray-500'}`}>
+                {likesCount > 0 ? likesCount : ''}
+              </span>
+            </button>
+          )}
         </div>
-        {/* Texto de la reseña */}
+        {/* Texto de la Reseña (dentro de la columna derecha) */}
         {review.review_text && (
-          <p className="text-[13px] text-gray-800 mt-1.5 leading-snug line-clamp-3">
+          <p className="text-[14px] text-gray-900 leading-relaxed mt-2 line-clamp-4">
             {review.review_text}
           </p>
+        )}
+        {/* Footer: Like anclado abajo (SOLO si HAY texto) */}
+        {review.review_text && (
+          <div className="flex justify-end mt-auto pt-2">
+            <button
+              onClick={handleToggleLike}
+              className="flex items-center gap-1.5 group"
+              disabled={isLoadingLike || !currentUserId}
+              aria-label={isLiked ? "Quitar like" : "Dar like"}
+              type="button"
+            >
+              {isLiked ? (
+                <FaHeart className="w-[18px] h-[18px] text-blue-600 scale-110 transition-transform" />
+              ) : (
+                <FaRegHeart className="w-[18px] h-[18px] text-gray-400 group-hover:text-blue-500 transition-colors" />
+              )}
+              <span className={`text-[13px] font-medium ${isLiked ? 'text-blue-600' : 'text-gray-500'}`}>
+                {likesCount > 0 ? likesCount : ''}
+              </span>
+            </button>
+          </div>
         )}
       </div>
     </div>

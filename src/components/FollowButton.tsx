@@ -52,7 +52,7 @@ export default function FollowButton({
     <button
       className={`px-6 min-w-[120px] py-2 rounded-full font-bold my-2 transition border text-base ${
         isFollowing
-          ? "bg-gray-100 text-gray-500 border-gray-300"
+          ? "bg-gray-100 text-gray-900 border-gray-300"
           : "bg-blue-600 text-white border-transparent hover:bg-blue-700"
       } ${loading ? "opacity-60 cursor-not-allowed" : ""} ${className ?? ""}`}
       onClick={handleClick}

@@ -13,29 +13,44 @@ import type { User } from '@supabase/supabase-js';
 
 export default function SongPage() {
   // Estados para swipe
-  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchStart, setTouchStart] = useState<{ x: number | null; y: number | null }>({
+    x: null,
+    y: null,
+  });
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
   const minSwipeDistance = 50;
   const [swipeOffset, setSwipeOffset] = useState(0); // Para efecto visual
 
   const onTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
-    setTouchStart(e.targetTouches[0].clientX);
+    setTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY,
+    });
     setSwipeOffset(0);
   };
   const onTouchMove = (e: React.TouchEvent) => {
-    if (touchStart === null) return;
+    if (touchStart.x === null || touchStart.y === null) return;
+
     const currentX = e.targetTouches[0].clientX;
-    const diff = currentX - touchStart;
+    const currentY = e.targetTouches[0].clientY;
+    const diffX = currentX - touchStart.x;
+    const diffY = currentY - touchStart.y;
+
+    // Axis Lock: si el movimiento vertical domina, dejamos scroll natural
+    if (Math.abs(diffY) > Math.abs(diffX)) {
+      return;
+    }
+
     // Limitar arrastre visual
-    if (diff > 0 && !hasPrevious) return;
-    if (diff < 0 && !hasNext) return;
-    setSwipeOffset(diff);
+    if (diffX > 0 && !hasPrevious) return;
+    if (diffX < 0 && !hasNext) return;
+    setSwipeOffset(diffX);
     setTouchEnd(currentX);
   };
   const onTouchEnd = () => {
-    if (touchStart === null || touchEnd === null) return;
-    const distance = touchStart - touchEnd;
+    if (touchStart.x === null || touchEnd === null) return;
+    const distance = touchStart.x - touchEnd;
     if (distance > minSwipeDistance && hasNext) {
       setSwipeOffset(0);
       goToNextTrack();
@@ -45,7 +60,7 @@ export default function SongPage() {
     } else {
       setSwipeOffset(0); // Vuelve a su lugar con animación
     }
-    setTouchStart(null);
+    setTouchStart({ x: null, y: null });
     setTouchEnd(null);
   };
     // Prefetch de rutas adyacentes se define más abajo, después de calcular hasPrevious/hasNext
@@ -132,16 +147,38 @@ export default function SongPage() {
     if (!params?.id) return;
     supabaseClient
       .from('reviews')
-      .select('*, rating, profiles(username, full_name, avatar_url)')
+      .select('*, rating, profiles(username, full_name, avatar_url), review_likes(user_id), likes:review_likes(count)')
       .eq('spotify_id', params.id)
       .eq('type', 'song')
       .order('created_at', { ascending: false })
       .then(({ data }) => {
-        setReviews(data || []);
-        if (data && data.length > 0) {
-          setTotalReviews(data.length);
-          const sum = data.reduce((acc, r) => acc + (r.rating || 0), 0);
-          setAverageRating(Math.round((sum / data.length) * 10) / 10);
+        const mapped = Array.isArray(data)
+          ? data.map((review: any) => {
+              const likeCountFromEmbed =
+                Array.isArray(review.likes) &&
+                (typeof review.likes?.[0]?.count === 'number' || typeof review.likes?.[0]?.count === 'string')
+                  ? Number(review.likes[0].count)
+                  : undefined;
+
+              return {
+                ...review,
+                likes_count:
+                  typeof likeCountFromEmbed === 'number'
+                    ? likeCountFromEmbed
+                    : typeof review.likes_count === 'number'
+                      ? review.likes_count
+                      : Array.isArray(review.review_likes)
+                        ? review.review_likes.length
+                        : 0,
+              };
+            })
+          : [];
+
+        setReviews(mapped);
+        if (mapped.length > 0) {
+          setTotalReviews(mapped.length);
+          const sum = mapped.reduce((acc, r) => acc + (r.rating || 0), 0);
+          setAverageRating(Math.round((sum / mapped.length) * 10) / 10);
         } else {
           setTotalReviews(0);
           setAverageRating(0);
@@ -236,13 +273,13 @@ export default function SongPage() {
 
     const diffMs = Date.now() - date.getTime();
     const diffMinutes = Math.max(0, Math.floor(diffMs / 60000));
-    if (diffMinutes < 60) return `hace ${diffMinutes}m`;
+    if (diffMinutes < 60) return `${diffMinutes}m`;
 
     const diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 24) return `hace ${diffHours}h`;
+    if (diffHours < 24) return `${diffHours}h`;
 
     const diffDays = Math.floor(diffHours / 24);
-    return `hace ${diffDays}d`;
+    return `${diffDays}d`;
   }
 
 
@@ -412,7 +449,7 @@ export default function SongPage() {
         minHeight: '100vh',
         transform: `translateX(${swipeOffset}px)`
       }}
-      className={`min-h-screen w-full relative ${(isBackgroundDark ? 'text-white' : 'text-gray-900')} ${touchStart === null ? 'transition-transform duration-300 ease-out' : ''}`}
+      className={`min-h-screen w-full relative touch-pan-y ${(isBackgroundDark ? 'text-white' : 'text-gray-900')} ${touchStart.x === null ? 'transition-transform duration-300 ease-out' : ''}`}
     >
       {/* Hero Section */}
       <div className="relative w-full h-[50vh]">
@@ -641,53 +678,94 @@ export default function SongPage() {
         <div className="flex flex-col">
           {reviews.map((review, idx) => {
             const displayName = review.profiles?.full_name || review.profiles?.username || 'Usuario';
-            const handle = review.profiles?.username ? `@${review.profiles.username}` : '';
+            const profileUsername = review.profiles?.username ? String(review.profiles.username) : '';
             const time = formatRelativeTime(review.created_at);
             const ratingValue = typeof review.rating === 'number' ? review.rating : 0;
             const reviewId = String(review.id);
             const isLiked = !!likedByReviewId[reviewId];
+            const likesCount = typeof review.likes_count === 'number' ? review.likes_count : Number(review.likes_count) || 0;
+            const hasText = Boolean(String(review.review_text || '').trim());
+
+            const textPrimary = isBackgroundDark ? 'text-white' : 'text-gray-900';
+            const textSecondary = isBackgroundDark ? 'text-white/60' : 'text-gray-500';
+            const borderColor = isBackgroundDark ? 'border-white/10' : 'border-black/10';
+            const heartInactive = isBackgroundDark
+              ? 'text-white/50 group-hover:text-white'
+              : 'text-gray-400 group-hover:text-gray-900';
+            const heartActive = isBackgroundDark ? 'text-white' : 'text-gray-900';
+
+            const avatar = review.profiles?.avatar_url ? (
+              <img
+                src={review.profiles.avatar_url}
+                alt={displayName}
+                className="w-10 h-10 rounded-full object-cover border border-black/5"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-black/5" />
+            );
 
             return (
               <div
                 key={review.id ?? `${review.user_id ?? 'u'}-${idx}`}
-                className="flex flex-row gap-3 py-4 border-b border-black/10"
+                className={`flex gap-3 py-4 border-b w-full last:border-0 items-start ${borderColor}`}
               >
-                {review.profiles?.avatar_url ? (
-                  <img
-                    src={review.profiles.avatar_url}
-                    alt={displayName}
-                    className="w-10 h-10 rounded-full shrink-0 object-cover bg-black/5"
-                  />
+                {profileUsername ? (
+                  <Link href={`/${profileUsername}`} className="shrink-0">
+                    {avatar}
+                  </Link>
                 ) : (
-                  <div className="w-10 h-10 rounded-full shrink-0 object-cover bg-black/5" />
+                  <div className="shrink-0">{avatar}</div>
                 )}
 
                 <div className="flex flex-col flex-1 min-w-0">
-                  <div className="flex items-baseline gap-1.5">
-                    <span className="text-sm font-bold text-current truncate">{displayName}</span>
-                    <span className="text-[11px] text-current opacity-80 truncate">
-                      {handle}
-                      {time ? ` • ${time}` : ''}
-                    </span>
+                  <div className="flex items-center gap-2 mb-0.5 min-w-0">
+                    <span className={`font-bold text-[14.5px] truncate ${textPrimary}`}>{displayName}</span>
+                    {time ? <span className={`text-[13px] ${textSecondary}`}>{time}</span> : null}
                   </div>
 
-                  <div className="flex items-center justify-between mt-1">
+                  <div className="flex items-center justify-between mt-0.5">
                     <StarRating rating={ratingValue} onChange={()=>{}} starSize={14} className="pointer-events-none" />
 
-                    <div
-                      className={`flex items-center gap-1 text-xs text-current transition-opacity cursor-pointer p-1 -mr-1 hover:opacity-80 ${isLiked ? 'opacity-100' : 'opacity-70'}`}
-                      onClick={() => handleLike(reviewId)}
-                      aria-label={isLiked ? 'Quitar like' : 'Dar like'}
-                      role="button"
-                      tabIndex={0}
-                    >
-                      {isLiked ? <FaHeart /> : <FaRegHeart />}
-                    </div>
+                    {!hasText ? (
+                      <button
+                        type="button"
+                        onClick={() => handleLike(reviewId)}
+                        className="flex items-center gap-1.5 group"
+                        aria-label={isLiked ? 'Quitar like' : 'Dar like'}
+                      >
+                        {isLiked ? (
+                          <FaHeart className={`w-[17px] h-[17px] ${heartActive}`} />
+                        ) : (
+                          <FaRegHeart className={`w-[17px] h-[17px] ${heartInactive}`} />
+                        )}
+                        <span className={`text-[13px] ${textSecondary}`}>{likesCount}</span>
+                      </button>
+                    ) : null}
                   </div>
 
-                  <div className="text-sm text-current leading-snug mt-1.5 w-full wrap-break-word">
-                    {review.review_text || ''}
-                  </div>
+                  {hasText ? (
+                    <p className={`text-[14.5px] leading-relaxed mt-1.5 ${isBackgroundDark ? 'text-white/90' : 'text-gray-800'}`}>
+                      {review.review_text}
+                    </p>
+                  ) : null}
+
+                  {hasText ? (
+                    <div className="flex justify-end mt-2">
+                      <button
+                        type="button"
+                        onClick={() => handleLike(reviewId)}
+                        className="flex items-center gap-1.5 group"
+                        aria-label={isLiked ? 'Quitar like' : 'Dar like'}
+                      >
+                        {isLiked ? (
+                          <FaHeart className={`w-[17px] h-[17px] ${heartActive}`} />
+                        ) : (
+                          <FaRegHeart className={`w-[17px] h-[17px] ${heartInactive}`} />
+                        )}
+                        <span className={`text-[13px] ${textSecondary}`}>{likesCount}</span>
+                      </button>
+                    </div>
+                  ) : null}
                 </div>
               </div>
             );

@@ -1,3 +1,4 @@
+
 "use client";
 
 
@@ -40,12 +41,14 @@ export default function FeedReviewCard({
   review,
   author,
   timeLabel,
+  timeLabelShort,
   initialIsLiked = false,
   initialLikesCount = 0,
 }: {
   review: FeedReview;
   author: FeedAuthor;
   timeLabel: string;
+  timeLabelShort?: string;
   initialIsLiked?: boolean;
   initialLikesCount?: number;
 }) {
@@ -74,6 +77,7 @@ export default function FeedReviewCard({
   useEffect(() => {
     if (typeof review.user_has_liked === "boolean") {
       setIsLiked(review.user_has_liked);
+
     }
   }, [review.user_has_liked]);
 
@@ -128,75 +132,88 @@ export default function FeedReviewCard({
     }
   };
 
+  const tipoLabel = review.type === 'album' ? 'Álbum' : 'Canción';
   return (
-    <div className="flex gap-4 px-4 py-4 border-b border-gray-200 w-full bg-white items-start">
-      {/* IZQUIERDA: Portada Grande (Clickeable) */}
-      <Link href={`/${review.type}/${review.spotify_id}`} className="shrink-0 group h-fit">
-        {review.spotify_image_url ? (
-          <img
-            src={review.spotify_image_url}
-            className="w-24 h-24 sm:w-28 sm:h-28 rounded-md object-cover shadow-sm border border-black/5 group-hover:opacity-80 transition-opacity"
-            alt={review.spotify_title || "Álbum/Canción desconocida"}
-          />
-        ) : (
-          <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-md bg-gray-100 border border-black/5" />
-        )}
-      </Link>
-
-      {/* DERECHA: Columna de Contenido */}
-      <div className="flex flex-col flex-1 min-w-0">
-        {/* 1. Header: Usuario (Clickeable y sutil) */}
-        <Link href={`/${username}`} className="flex items-center gap-1.5 group mb-1 w-full min-w-0">
-          {author.avatar_url ? (
-            <img src={author.avatar_url} className="w-5 h-5 rounded-full object-cover group-hover:opacity-80 shrink-0" alt={username} />
+    <div className="flex flex-col gap-2.5 px-4 pt-4 pb-3 border-b border-gray-200 w-full bg-white">
+      <div className="flex gap-3 sm:gap-4 w-full items-start">
+        <Link href={`/${review.type}/${review.spotify_id}`} className="shrink-0 group">
+          {review.spotify_image_url ? (
+            <img
+              src={review.spotify_image_url}
+              className="w-24 h-24 sm:w-26 sm:h-26 rounded-lg object-cover shadow-sm border border-black/5 group-hover:opacity-80 transition-opacity"
+              alt={review.spotify_title || "Álbum/Canción desconocida"}
+            />
           ) : (
-            <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-[11px] font-bold text-white">
-              {username.charAt(0).toUpperCase()}
+            <div className="w-24 h-24 sm:w-26 sm:h-26 rounded-lg bg-gray-100 border border-black/5" />
+          )}
+        </Link>
+        <div className="flex flex-col flex-1 min-w-0">
+          {/* Header Usuario (1 línea horizontal, blindado contra desbordes) */}
+          <Link href={`/${username}`} className="flex items-center gap-1.5 group mb-1.5 w-full min-w-0">
+            <img src={author.avatar_url || "/default-avatar.png"} className="w-5 h-5 rounded-full object-cover shrink-0 group-hover:opacity-80" alt={username} />
+            <div className="flex items-baseline gap-1.5 flex-1 min-w-0">
+              <span className="text-[14px] font-bold text-gray-900 group-hover:underline decoration-gray-400 truncate shrink">
+                {displayName || username}
+              </span>
+              <span className="text-[13px] text-gray-500 truncate shrink">
+                @{username}
+              </span>
+              <span className="text-[13px] text-gray-500 shrink-0">
+                • {timeLabelShort || timeLabel}
+              </span>
             </div>
-          )}
-          <div className="flex items-center gap-1 flex-1 min-w-0">
-            <span className="text-[13.5px] font-bold text-gray-900 group-hover:underline decoration-gray-400 underline-offset-2 truncate shrink">
-              {displayName || username}
-            </span>
-            <span className="text-[12.5px] text-gray-500 truncate min-w-0 shrink">
-              @{username}
-            </span>
-            <span className="text-[12px] text-gray-500 shrink-0">
-              • {timeLabel}
-            </span>
+          </Link>
+          <Link href={`/${review.type}/${review.spotify_id}`} className="group w-fit min-w-0 mb-1">
+            <h3 className="text-[15.5px] font-bold text-gray-900 leading-tight line-clamp-2">
+              {review.spotify_title || "Álbum/Canción desconocida"}
+            </h3>
+            <div className="flex items-center gap-1.5 text-[13px] text-gray-500 group-hover:text-gray-700 transition-colors mt-0.5">
+              <span className="truncate">{review.spotify_artist || ""}</span>
+              <span className="text-[10px] opacity-70">•</span>
+              <span className="shrink-0 font-medium">{tipoLabel}</span>
+            </div>
+          </Link>
+          {/* 3. Estrellas (Y Like condicional si NO hay texto) */}
+          <div className="flex items-center justify-between mt-0.5 w-full">
+            <div className="flex items-center">
+              {[1, 2, 3, 4, 5].map((i) =>
+                i <= (review.rating || 0) ? (
+                  <FaStar key={i} className="w-3.5 h-3.5 text-blue-600" />
+                ) : (
+                  <FaRegStar key={i} className="w-3.5 h-3.5 text-gray-300" />
+                )
+              )}
+            </div>
+            {/* Renderiza el Like AQUÍ solo si NO hay texto */}
+            {!review.review_text && (
+              <button
+                onClick={handleToggleLike}
+                className="flex items-center gap-1.5 group"
+                disabled={isLoadingLike}
+                aria-label={isLiked ? "Quitar like" : "Dar like"}
+                type="button"
+              >
+                {isLiked ? (
+                  <FaHeart className="w-[18px] h-[18px] text-blue-600 scale-110 transition-transform" />
+                ) : (
+                  <FaRegHeart className="w-[18px] h-[18px] text-gray-400 group-hover:text-blue-500 transition-colors" />
+                )}
+                <span className={`text-[13px] font-medium ${isLiked ? 'text-blue-600' : 'text-gray-500'}`}>
+                  {likesCount > 0 ? likesCount : ''}
+                </span>
+              </button>
+            )}
           </div>
-        </Link>
-
-        {/* 2. Info de la Obra (Clickeable) */}
-        <Link href={`/${review.type}/${review.spotify_id}`} className="group mb-1 w-fit">
-          <h3 className="text-[16px] font-bold text-gray-900 leading-tight group-hover:underline decoration-gray-900 underline-offset-2">
-            {review.spotify_title || "Álbum/Canción desconocida"}
-          </h3>
-          <p className="text-[13.5px] text-gray-500 truncate group-hover:text-gray-700 transition-colors">
-            {review.spotify_artist || ""}
-          </p>
-        </Link>
-
-        {/* 3. Estrellas */}
-        <div className="flex items-center mb-2">
-          {[1, 2, 3, 4, 5].map((i) =>
-            i <= (review.rating || 0) ? (
-              <FaStar key={i} className="w-3.5 h-3.5 text-blue-600" />
-            ) : (
-              <FaRegStar key={i} className="w-3.5 h-3.5 text-gray-300" />
-            )
-          )}
         </div>
-
-        {/* 4. Texto de la Reseña */}
-        {review.review_text?.trim() && (
-          <p className="text-[14px] text-gray-800 leading-relaxed mb-2 line-clamp-4">
-            {review.review_text}
-          </p>
-        )}
-
-        {/* 5. Footer: Like alineado a la derecha */}
-        <div className="flex justify-end mt-1.5 pt-1">
+      </div>
+      {review.review_text?.trim() && (
+        <p className="text-[14.5px] text-gray-800 leading-relaxed mt-1 w-full">
+          {review.review_text}
+        </p>
+      )}
+      {/* Footer: Like anclado abajo (SOLO si HAY texto) */}
+      {review.review_text && (
+        <div className="flex justify-end mt-auto pt-2">
           <button
             onClick={handleToggleLike}
             className="flex items-center gap-1.5 group"
@@ -205,16 +222,16 @@ export default function FeedReviewCard({
             type="button"
           >
             {isLiked ? (
-              <FaHeart className="w-4 h-4 text-blue-600 scale-110 transition-transform" />
+              <FaHeart className="w-[18px] h-[18px] text-blue-600 scale-110 transition-transform" />
             ) : (
-              <FaRegHeart className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+              <FaRegHeart className="w-[18px] h-[18px] text-gray-400 group-hover:text-blue-500 transition-colors" />
             )}
-            <span className={`text-[12px] font-bold ${isLiked ? "text-blue-600" : "text-gray-500"}`}>
-              {likesCount > 0 ? likesCount : ""}
+            <span className={`text-[13px] font-medium ${isLiked ? 'text-blue-600' : 'text-gray-500'}`}>
+              {likesCount > 0 ? likesCount : ''}
             </span>
           </button>
         </div>
-      </div>
+      )}
     </div>
   );
 }
