@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
 import imageCompression from "browser-image-compression";
 import { FiSettings } from "react-icons/fi";
-import { FaCamera, FaPlus, FaHeart, FaRegHeart } from "react-icons/fa";
+import { FaCamera, FaPlus, FaHeart, FaRegHeart, FaStar, FaRegStar } from "react-icons/fa";
 import ProfileSettings from "@/components/ProfileSettings";
 import AvatarUpload from "@/components/AvatarUpload";
 import BottomNav from "@/components/BottomNav";
@@ -42,7 +42,6 @@ function ProfileReviewCard({
     );
   }, [review.likes_count]);
 
-  // Recalcular `isLiked` si viene la relación `review_likes`
   useEffect(() => {
     if (!currentUserId) return;
     if (Array.isArray(review.review_likes)) {
@@ -53,14 +52,11 @@ function ProfileReviewCard({
 
   const handleToggleLike = async () => {
     if (!currentUserId || isLoadingLike) return;
-
     setIsLoadingLike(true);
     const prevLiked = isLiked;
     const prevCount = likesCount;
-
     setIsLiked(!prevLiked);
     setLikesCount(prevLiked ? prevCount - 1 : prevCount + 1);
-
     try {
       if (!prevLiked) {
         const { error } = await supabaseClient
@@ -76,14 +72,10 @@ function ProfileReviewCard({
         if (error) throw error;
       }
     } catch (err: any) {
-      // Hack: si intentamos INSERT pero ya existía (23505 / 409), la DB confirma que está liked.
       if (!prevLiked && (err?.code === "23505" || err?.status === 409)) {
-        // eslint-disable-next-line no-console
-        console.warn("El like ya existía. Corrigiendo estado UI...");
         setIsLiked(true);
         return;
       }
-
       setIsLiked(prevLiked);
       setLikesCount(prevCount);
       // eslint-disable-next-line no-console
@@ -95,57 +87,53 @@ function ProfileReviewCard({
   };
 
   return (
-    <div className="flex gap-3 py-3 border-b border-gray-200/60 last:border-0 mx-4">
-      {/* PORTADA (Con fallback por si falla la URL) */}
-      <div className="w-12 h-12 shrink-0 bg-gray-200 rounded-md overflow-hidden border border-black/5">
-        {(review?.spotify_image_url || review?.image_url || review?.image) && (
-          <img
-            src={review.spotify_image_url || review.image_url || review.image}
-            alt="Portada"
-            className="w-full h-full object-cover"
-          />
-        )}
-      </div>
-
-      {/* INFO, ESTRELLAS Y LIKE */}
-      <div className="flex flex-col flex-1 min-w-0">
-        <h4 className="text-sm font-bold text-gray-900 truncate">
-          {review.spotify_title || review.title || "Obra Desconocida"}
-        </h4>
-        <p className="text-[11px] text-gray-500 truncate">
-          {review.spotify_artist || review.artist || "Artista"}
-        </p>
-        <div className="mt-1 flex items-center">
-          <StarRating
-            rating={review.rating || review.score || 0}
-            starSize={12}
-            onChange={() => {}}
-            className="text-blue-600"
-          />
+    <div className="flex gap-4 py-4 border-b border-gray-200 last:border-0">
+      {/* Imagen de la obra */}
+      <img
+        src={review.spotify_image_url || review.image_url || review.image}
+        alt="Portada"
+        className="w-14 h-14 rounded-md object-cover shrink-0 shadow-sm border border-black/5"
+      />
+      {/* Contenedor de Textos */}
+      <div className="flex flex-col flex-1 min-w-0 justify-center">
+        {/* Título y Artista bien compactos */}
+        <p className="text-sm font-bold text-gray-900 truncate">{review.spotify_title || review.title || "Obra Desconocida"}</p>
+        <p className="text-[11px] text-gray-500 truncate leading-tight">{review.spotify_artist || review.artist || "Artista"}</p>
+        {/* Estrellas y Like en la misma línea */}
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center">
+            {[1, 2, 3, 4, 5].map((i) =>
+              i <= (review.rating || review.score || 0) ? (
+                <FaStar key={i} size={13} className="text-blue-600" />
+              ) : (
+                <FaRegStar key={i} size={13} className="text-gray-200" />
+              )
+            )}
+          </div>
+          {/* Botón de Like alineado a la derecha y color Azul Bopp */}
+          <button
+            onClick={handleToggleLike}
+            className="flex items-center gap-1.5 group ml-4"
+            disabled={isLoadingLike || !currentUserId}
+            aria-label={isLiked ? "Quitar like" : "Dar like"}
+            type="button"
+          >
+            {isLiked ? (
+              <FaHeart className="w-4 h-4 text-blue-600 scale-110 transition-transform" />
+            ) : (
+              <FaRegHeart className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+            )}
+            <span className={`text-[11px] font-bold ${isLiked ? "text-blue-600" : "text-gray-500"}`}>
+              {likesCount > 0 ? likesCount : ""}
+            </span>
+          </button>
         </div>
-
-        {(review.review_text || review.content) && (
-          <p className="text-sm text-gray-700 mt-1.5 leading-relaxed wrap-break-word">
-            {review.review_text || review.content}
+        {/* Texto de la reseña */}
+        {review.review_text && (
+          <p className="text-[13px] text-gray-800 mt-1.5 leading-snug line-clamp-3">
+            {review.review_text}
           </p>
         )}
-
-        <button
-          onClick={handleToggleLike}
-          className="flex items-center gap-1.5 mt-3 group w-fit"
-          disabled={isLoadingLike || !currentUserId}
-          aria-label={isLiked ? "Quitar like" : "Dar like"}
-          type="button"
-        >
-          {isLiked ? (
-            <FaHeart className="w-4 h-4 text-red-500 scale-110 transition-transform" />
-          ) : (
-            <FaRegHeart className="w-4 h-4 text-gray-400 group-hover:text-red-400 transition-colors" />
-          )}
-          <span className={`text-xs ${isLiked ? "text-red-500 font-bold" : "text-gray-500"}`}>
-            {likesCount > 0 ? likesCount : ""}
-          </span>
-        </button>
       </div>
     </div>
   );

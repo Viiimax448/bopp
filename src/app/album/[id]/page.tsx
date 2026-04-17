@@ -248,6 +248,45 @@ export default function AlbumPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params?.id]);
 
+  const [userRating, setUserRating] = useState(0); // Nuevo estado para el rating del usuario
+
+  // Callback para actualizar rating y reviews tras reseña
+  const handleReviewSuccess = (newRating: number) => {
+    setRating(newRating); // Siempre sincroniza el rating principal
+    setUserRating(newRating); // (opcional, si se usa en el modal)
+    fetchReviews();
+  };
+
+  // Refactor: extraer fetchReviews para poder llamarlo desde el callback
+  function fetchReviews() {
+    if (!params?.id) return;
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+    supabase
+      .from('reviews')
+      .select('*, rating, profiles(username, full_name, avatar_url)')
+      .eq('spotify_id', params.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }) => {
+        setReviews(data || []);
+        if (data && data.length > 0) {
+          setTotalReviews(data.length);
+          const sum = data.reduce((acc, r) => acc + (r.rating || 0), 0);
+          setAverageRating(Math.round((sum / data.length) * 10) / 10);
+        } else {
+          setTotalReviews(0);
+          setAverageRating(0);
+        }
+      });
+  }
+
+  // Reemplazar el useEffect de reviews para usar fetchReviews
+  useEffect(() => {
+    fetchReviews();
+  }, [params?.id, isReviewOpen]);
+
   if (isLoading || !album) {
     return (
       <div className="bg-[#121212] min-h-screen flex items-center justify-center text-gray-300 text-xl">
@@ -526,6 +565,7 @@ export default function AlbumPage() {
       <ReviewModal
         isOpen={isReviewOpen}
         onClose={() => setIsReviewOpen(false)}
+        onReviewSuccess={handleReviewSuccess}
         type="album"
         title={album.name}
         artist={album.artists?.[0]?.name || ''}

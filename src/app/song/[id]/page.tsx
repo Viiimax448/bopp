@@ -1,24 +1,62 @@
 
-'use client'
-
-
-import { useParams } from 'next/navigation'
-import { useEffect, useRef, useState } from 'react'
+"use client";
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 import { getColor } from 'colorthief';
-import { FaHeart, FaRegHeart } from 'react-icons/fa'
-// import duplicado eliminado
+import { FaHeart, FaRegHeart, FaChevronRight, FaChevronLeft } from 'react-icons/fa';
+import { useRouter } from 'next/navigation';
 import StarRating from '@/components/StarRating';
 import { createBrowserClient } from '@supabase/ssr';
 import ReviewModal from '@/components/ReviewModal';
-import type { User } from '@supabase/supabase-js'
-
+import type { User } from '@supabase/supabase-js';
 
 export default function SongPage() {
+  // Estados para swipe
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  const minSwipeDistance = 50;
+  const [swipeOffset, setSwipeOffset] = useState(0); // Para efecto visual
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+    setSwipeOffset(0);
+  };
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (touchStart === null) return;
+    const currentX = e.targetTouches[0].clientX;
+    const diff = currentX - touchStart;
+    // Limitar arrastre visual
+    if (diff > 0 && !hasPrevious) return;
+    if (diff < 0 && !hasNext) return;
+    setSwipeOffset(diff);
+    setTouchEnd(currentX);
+  };
+  const onTouchEnd = () => {
+    if (touchStart === null || touchEnd === null) return;
+    const distance = touchStart - touchEnd;
+    if (distance > minSwipeDistance && hasNext) {
+      setSwipeOffset(0);
+      goToNextTrack();
+    } else if (distance < -minSwipeDistance && hasPrevious) {
+      setSwipeOffset(0);
+      goToPreviousTrack();
+    } else {
+      setSwipeOffset(0); // Vuelve a su lugar con animación
+    }
+    setTouchStart(null);
+    setTouchEnd(null);
+  };
+    // Prefetch de rutas adyacentes se define más abajo, después de calcular hasPrevious/hasNext
   const params = useParams();
   const [song, setSong] = useState<any>(null);
+  const [albumTracks, setAlbumTracks] = useState<any[]>([]); // Lista de tracks del álbum
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
   const [isReviewOpen, setIsReviewOpen] = useState(false);
   const [rating, setRating] = useState(0);
+  const [userRating, setUserRating] = useState(0); // Nuevo estado para el rating del usuario
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [reviews, setReviews] = useState<any[]>([]);
@@ -63,18 +101,34 @@ export default function SongPage() {
     return (r * 0.299 + g * 0.587 + b * 0.114) < 128;
   }
 
-  // Fetch song info
+  // Fetch song info y tracks del álbum
   useEffect(() => {
     if (!params?.id) return;
     setIsLoading(true);
     fetch(`/api/spotify/song/${params.id}`)
       .then(res => res.json())
-      .then(data => setSong(data))
+      .then(data => {
+        setSong(data);
+        // Si hay info de álbum y tracks, setearlos
+        if (data?.album?.id) {
+          fetch(`/api/spotify/album/${data.album.id}`)
+            .then(res => res.json())
+            .then(albumData => {
+              if (albumData?.tracks?.items) {
+                setAlbumTracks(albumData.tracks.items);
+              } else {
+                setAlbumTracks([]);
+              }
+            });
+        } else {
+          setAlbumTracks([]);
+        }
+      })
       .finally(() => setIsLoading(false));
   }, [params?.id]);
 
   // Fetch reviews reales de Supabase y calcular promedio/cantidad
-  useEffect(() => {
+  function fetchReviews() {
     if (!params?.id) return;
     supabaseClient
       .from('reviews')
@@ -93,6 +147,10 @@ export default function SongPage() {
           setAverageRating(0);
         }
       });
+  }
+
+  useEffect(() => {
+    fetchReviews();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params?.id, isReviewOpen]);
 
@@ -254,7 +312,12 @@ export default function SongPage() {
     }
   }
 
-
+  // Callback para actualizar rating y reviews tras reseña
+  const handleReviewSuccess = (newRating: number) => {
+    setRating(newRating); // Siempre sincroniza el rating principal
+    setUserRating(newRating); // (opcional, si se usa en el modal)
+    fetchReviews();
+  };
 
   // Extraer metadata relevante de la canción y fallback si falta info
   let album: any = {};
@@ -262,13 +325,37 @@ export default function SongPage() {
   let artists = '';
   let releaseYear = '';
   let imageUrl = null;
+  let albumId = '';
   if (song) {
     album = song.album || {};
     songName = song.name || song.title || 'Sin título';
     artists = song.artists?.map((a: any) => a.name).join(', ') || song.artist || 'Artista desconocido';
     releaseYear = album.release_date ? album.release_date.slice(0, 4) : '';
     imageUrl = album.images?.[0]?.url || song.album?.images?.[0]?.url || song.images?.[0]?.url || null;
+    albumId = album.id || '';
   }
+
+  // Navegación rápida entre tracks del álbum
+  let currentTrackIndex = -1;
+  if (albumTracks && albumTracks.length > 0 && params?.id) {
+    currentTrackIndex = albumTracks.findIndex((t) => t.id === params.id);
+  }
+  const hasPrevious = currentTrackIndex > 0;
+  const hasNext = currentTrackIndex >= 0 && currentTrackIndex < albumTracks.length - 1;
+  const prevTrackId = hasPrevious ? albumTracks[currentTrackIndex - 1]?.id : null;
+  const nextTrackId = hasNext ? albumTracks[currentTrackIndex + 1]?.id : null;
+  const goToPreviousTrack = () => {
+    if (hasPrevious) {
+      const prevId = albumTracks[currentTrackIndex - 1].id;
+      router.push(`/song/${prevId}`);
+    }
+  };
+  const goToNextTrack = () => {
+    if (hasNext) {
+      const nextId = albumTracks[currentTrackIndex + 1].id;
+      router.push(`/song/${nextId}`);
+    }
+  };
 
 
   // Handler para extraer color dominante con ColorThief
@@ -299,9 +386,16 @@ export default function SongPage() {
   }
 
   return (
-    <div
-      className={"min-h-screen relative " + (isBackgroundDark ? 'text-white' : 'text-gray-900')}
-      style={{ backgroundColor: dominantColor, minHeight: '100vh' }}
+    <main
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
+      style={{
+        backgroundColor: dominantColor,
+        minHeight: '100vh',
+        transform: `translateX(${swipeOffset}px)`
+      }}
+      className={`min-h-screen w-full relative ${(isBackgroundDark ? 'text-white' : 'text-gray-900')} ${touchStart === null ? 'transition-transform duration-300 ease-out' : ''}`}
     >
       {/* Hero Section */}
       <div className="relative w-full h-[50vh]">
@@ -383,11 +477,58 @@ export default function SongPage() {
         </h2>
 
         <div className={`flex items-center gap-2 ${isBackgroundDark ? 'text-white' : 'text-gray-900'}`}>
-            <StarRating rating={averageRating} onChange={()=>{}} starSize={20} className="pointer-events-none" />
+          <StarRating rating={averageRating} onChange={()=>{}} starSize={20} className="pointer-events-none" />
           <span className="text-sm font-semibold">
             {averageRating.toFixed(1)} • {totalReviews} reseña{totalReviews === 1 ? '' : 's'}
           </span>
         </div>
+
+        {/* Tarjeta de contexto de álbum */}
+        {album?.id && album?.name && imageUrl && (
+          <>
+            <Link
+              href={`/album/${album.id}`}
+              className="w-full flex items-center gap-3 mt-6 p-2.5 rounded-xl hover:bg-black/5 transition-colors border border-black/10"
+              style={{ color: 'inherit' }}
+            >
+              <img
+                src={imageUrl}
+                alt={album.name}
+                className="w-12 h-12 rounded-md object-cover shadow-sm shrink-0"
+              />
+              <div className="flex flex-col flex-1 min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-wider opacity-60">
+                  Aparece en el álbum
+                </span>
+                <span className="text-sm font-bold truncate opacity-90 mt-0.5">
+                  {album.name}
+                </span>
+              </div>
+              <FaChevronRight className="w-4 h-4 opacity-40 shrink-0 ml-2" />
+            </Link>
+            {/* Barra de navegación de tracks */}
+            {albumTracks.length > 1 && currentTrackIndex !== -1 && (
+              <div className="flex items-center justify-between w-full gap-3 mt-3">
+                <button
+                  onClick={goToPreviousTrack}
+                  disabled={!hasPrevious}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold transition-all border border-black/10 ${hasPrevious ? 'hover:bg-black/5 opacity-80 hover:opacity-100 active:scale-[0.98]' : 'opacity-30 cursor-not-allowed'}`}
+                >
+                  <FaChevronLeft className="w-3 h-3" />
+                  Anterior
+                </button>
+                <button
+                  onClick={goToNextTrack}
+                  disabled={!hasNext}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold transition-all border border-black/10 ${hasNext ? 'hover:bg-black/5 opacity-80 hover:opacity-100 active:scale-[0.98]' : 'opacity-30 cursor-not-allowed'}`}
+                >
+                  Siguiente
+                  <FaChevronRight className="w-3 h-3" />
+                </button>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* Zona de Reseña */}
@@ -490,6 +631,7 @@ export default function SongPage() {
       <ReviewModal
         isOpen={isReviewOpen}
         onClose={() => setIsReviewOpen(false)}
+        onReviewSuccess={handleReviewSuccess}
         type="song"
         title={songName}
         artist={artists}
@@ -498,6 +640,6 @@ export default function SongPage() {
         spotifyId={song.id}
         spotifyImageUrl={song?.album?.images?.[0]?.url || song?.images?.[0]?.url || ''}
       />
-    </div>
+    </main>
   )
 }

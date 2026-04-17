@@ -1,4 +1,3 @@
-
 "use client";
 import { useState, useEffect, useRef } from "react";
 import { createBrowserClient } from '@supabase/ssr';
@@ -8,6 +7,7 @@ import StarRating from './StarRating';
 interface ReviewModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onReviewSuccess?: (rating: number) => void;
   type: "album" | "song";
   title: string;
   artist: string;
@@ -28,6 +28,7 @@ const PLACEHOLDER = {
 export default function ReviewModal({
   isOpen,
   onClose,
+  onReviewSuccess,
   type,
   title,
   artist,
@@ -115,9 +116,10 @@ export default function ReviewModal({
         console.error(error);
         alert('Ocurrió un error al publicar la reseña.');
       } else {
+        // Notificar al padre el nuevo rating
+        if (onReviewSuccess) onReviewSuccess(rating);
         setPublished(true);
         setText("");
-        setRating(0);
         setHotTakes([]);
         setTimeout(() => {
           setPublished(false);

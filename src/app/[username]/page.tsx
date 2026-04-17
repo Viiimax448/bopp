@@ -1,12 +1,9 @@
-
-
 "use client";
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { createBrowserClient } from "@supabase/ssr";
-import { FaEllipsisH, FaRegStar, FaStar, FaStarHalfAlt } from "react-icons/fa";
-
+import { FaEllipsisH, FaRegStar, FaStar, FaStarHalfAlt, FaHeart, FaRegHeart } from "react-icons/fa";
 
 import BottomNav from "@/components/BottomNav";
 import FollowButton from "@/components/FollowButton";
@@ -53,7 +50,6 @@ export default function PublicProfilePage() {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
     );
-
     Promise.all([
       supabase
         .from("followers")
@@ -65,15 +61,39 @@ export default function PublicProfilePage() {
         .eq("follower_id", profile.id),
       supabase
         .from("reviews")
-        .select("*")
+        .select(`*, review_likes (user_id), likes:review_likes (count)`)
         .eq("user_id", profile.id)
         .order("created_at", { ascending: false }),
     ]).then(([followersRes, followingRes, reviewsRes]) => {
       setFollowersCount(followersRes.count || 0);
       setFollowingCount(followingRes.count || 0);
-      setReviews(reviewsRes.data || []);
+      const currentUserId = session?.user?.id || null;
+      const mappedReviews = Array.isArray(reviewsRes.data)
+        ? reviewsRes.data.map((review: any) => {
+            const likeCountFromEmbed =
+              Array.isArray(review.likes) &&
+              (typeof review.likes?.[0]?.count === "number" || typeof review.likes?.[0]?.count === "string")
+                ? Number(review.likes[0].count)
+                : undefined;
+            return {
+              ...review,
+              user_has_liked: Array.isArray(review.review_likes)
+                ? review.review_likes.some((like: any) => like.user_id === currentUserId)
+                : false,
+              likes_count:
+                typeof likeCountFromEmbed === "number"
+                  ? likeCountFromEmbed
+                  : typeof review.likes_count === "number"
+                    ? review.likes_count
+                    : Array.isArray(review.review_likes)
+                      ? review.review_likes.length
+                      : 0,
+            };
+          })
+        : [];
+      setReviews(mappedReviews);
     });
-  }, [profile?.id]);
+  }, [profile?.id, session?.user?.id]);
 
   useEffect(() => {
     if (!session?.user?.id || !profile?.id || session.user.id === profile.id) {
@@ -113,8 +133,6 @@ export default function PublicProfilePage() {
   }
 
   const isOwnProfile = session?.user?.id === profile?.id;
-
-
 
   // Compartir y copiar enlace (menú desplegable)
   const handleCopyLink = async () => {
@@ -354,32 +372,11 @@ export default function PublicProfilePage() {
           {reviews.length > 0 ? (
             <div className="flex flex-col w-full">
               {reviews.map((review, index) => (
-                <div key={review.id || index} className="flex gap-3 py-3 border-b border-gray-200/60 last:border-0 mx-4">
-                  {/* PORTADA (Con fallback por si falla la URL) */}
-                  <div className="w-12 h-12 shrink-0 bg-gray-200 rounded-md overflow-hidden border border-black/5">
-                    {(review?.spotify_image_url || review?.image_url || review?.image) && (
-                      <img
-                        src={review.spotify_image_url || review.image_url || review.image}
-                        alt="Portada"
-                        className="w-full h-full object-cover"
-                      />
-                    )}
-                  </div>
-
-                  {/* INFO Y ESTRELLAS */}
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-gray-900 truncate">{review.spotify_title || review.title || 'Obra Desconocida'}</h4>
-                    <p className="text-[11px] text-gray-500 truncate">{review.spotify_artist || review.artist || 'Artista'}</p>
-                    <div className="mt-1 flex items-center">
-                      <StarRating rating={review.rating || review.score || 0} starSize={12} onChange={() => {}} className="text-blue-600" />
-                    </div>
-                    {(review.review_text || review.content) && (
-                      <p className="text-[13px] text-gray-700 mt-1.5 leading-snug line-clamp-3 break-words">
-                        {review.review_text || review.content}
-                      </p>
-                    )}
-                  </div>
-                </div>
+                <PublicProfileReviewCard
+                  key={review.id || index}
+                  review={review}
+                  currentUserId={session?.user?.id || null}
+                />
               ))}
             </div>
           ) : (
@@ -388,6 +385,132 @@ export default function PublicProfilePage() {
       </div>
 
       <BottomNav />
+    </div>
+  );
+}
+
+function PublicProfileReviewCard({
+  review,
+  currentUserId,
+}: {
+  review: any;
+  currentUserId: string | null;
+}) {
+  const [isLiked, setIsLiked] = useState(Boolean(review.user_has_liked));
+  const [likesCount, setLikesCount] = useState<number>(
+    typeof review.likes_count === "number" ? review.likes_count : Number(review.likes_count) || 0
+  );
+  const [isLoadingLike, setIsLoadingLike] = useState(false);
+
+  const supabaseClient = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  useEffect(() => {
+    setIsLiked(Boolean(review.user_has_liked));
+  }, [review.user_has_liked]);
+
+  useEffect(() => {
+    if (review.likes_count === undefined || review.likes_count === null) return;
+    setLikesCount(
+      typeof review.likes_count === "number" ? review.likes_count : Number(review.likes_count) || 0
+    );
+  }, [review.likes_count]);
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    if (Array.isArray(review.review_likes)) {
+      const liked = review.review_likes.some((like: any) => like.user_id === currentUserId);
+      setIsLiked(liked);
+    }
+  }, [currentUserId, review.review_likes]);
+
+  const handleToggleLike = async () => {
+    if (!currentUserId || isLoadingLike) return;
+    setIsLoadingLike(true);
+    const prevLiked = isLiked;
+    const prevCount = likesCount;
+    setIsLiked(!prevLiked);
+    setLikesCount(prevLiked ? prevCount - 1 : prevCount + 1);
+    try {
+      if (!prevLiked) {
+        const { error } = await supabaseClient
+          .from("review_likes")
+          .insert([{ review_id: review.id, user_id: currentUserId }]);
+        if (error) throw error;
+      } else {
+        const { error } = await supabaseClient
+          .from("review_likes")
+          .delete()
+          .eq("review_id", review.id)
+          .eq("user_id", currentUserId);
+        if (error) throw error;
+      }
+    } catch (err: any) {
+      if (!prevLiked && (err?.code === "23505" || err?.status === 409)) {
+        setIsLiked(true);
+        return;
+      }
+      setIsLiked(prevLiked);
+      setLikesCount(prevCount);
+      // eslint-disable-next-line no-console
+      console.error("Error al actualizar el like:", err);
+      alert("Hubo un error al actualizar el like. Revisa la consola para más detalles.");
+    } finally {
+      setIsLoadingLike(false);
+    }
+  };
+
+  return (
+    <div className="flex gap-4 py-4 border-b border-gray-200 last:border-0">
+      {/* Imagen de la obra */}
+      <img
+        src={review.spotify_image_url || review.image_url || review.image}
+        alt="Portada"
+        className="w-14 h-14 rounded-md object-cover shrink-0 shadow-sm border border-black/5"
+      />
+      {/* Contenedor de Textos */}
+      <div className="flex flex-col flex-1 min-w-0 justify-center">
+        {/* Título y Artista bien compactos */}
+        <p className="text-sm font-bold text-gray-900 truncate">{review.spotify_title || review.title || "Obra Desconocida"}</p>
+        <p className="text-[11px] text-gray-500 truncate leading-tight">{review.spotify_artist || review.artist || "Artista"}</p>
+        {/* Estrellas y Like en la misma línea */}
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center">
+            {[1, 2, 3, 4, 5].map((i) =>
+              i <= (review.rating || review.score || 0) ? (
+                <FaStar key={i} size={13} className="text-blue-600" />
+              ) : (
+                <FaRegStar key={i} size={13} className="text-gray-200" />
+              )
+            )}
+          </div>
+          {/* Botón de Like alineado a la derecha y color Azul Bopp */}
+          <button
+            onClick={handleToggleLike}
+            className="flex items-center gap-1.5 group ml-4"
+            disabled={isLoadingLike || !currentUserId}
+            aria-label={isLiked ? "Quitar like" : "Dar like"}
+            type="button"
+          >
+            {isLiked ? (
+              <FaHeart className="w-4 h-4 text-blue-600 scale-110 transition-transform" />
+            ) : (
+              <FaRegHeart className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+            )}
+            <span className={`text-[11px] font-bold ${isLiked ? "text-blue-600" : "text-gray-500"}`}>
+              {likesCount > 0 ? likesCount : ""}
+            </span>
+          </button>
+        </div>
+        {/* Texto de la reseña */}
+        {review.review_text && (
+          <p className="text-[13px] text-gray-800 mt-1.5 leading-snug line-clamp-3">
+            {review.review_text}
+          </p>
+        )}
+      </div>
     </div>
   );
 }
