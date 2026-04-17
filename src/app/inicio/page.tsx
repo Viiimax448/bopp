@@ -220,23 +220,25 @@ export default async function InicioPage() {
 
       <h2 className="text-xl font-bold text-gray-900 px-4 mt-8 mb-4">Actividad reciente</h2>
 
-      <div className="px-4 pb-32">
+      <div className="pb-32">
         {reviews.length === 0 ? (
-          <div className="bg-[#F5F5F7] rounded-2xl p-8 flex flex-col items-center text-center">
-            <FaUsers className="text-4xl text-gray-400 mb-3" />
-            <div className="text-xl font-bold text-gray-900 mb-1">Tu feed está vacío</div>
-            <div className="text-gray-500 mb-6">
-              Seguí a tus amigos para ver sus últimas reseñas.
+          <div className="px-4">
+            <div className="bg-[#F5F5F7] rounded-2xl p-8 flex flex-col items-center text-center">
+              <FaUsers className="text-4xl text-gray-400 mb-3" />
+              <div className="text-xl font-bold text-gray-900 mb-1">Tu feed está vacío</div>
+              <div className="text-gray-500 mb-6">
+                Seguí a tus amigos para ver sus últimas reseñas.
+              </div>
+              <Link
+                href="/buscar"
+                className="px-6 py-3 rounded-full bg-blue-600 text-white font-bold hover:bg-blue-700"
+              >
+                Buscar amigos
+              </Link>
             </div>
-            <Link
-              href="/buscar"
-              className="px-6 py-3 rounded-full bg-blue-600 text-white font-bold hover:bg-blue-700"
-            >
-              Buscar amigos
-            </Link>
           </div>
         ) : (
-          <div className="bg-white mt-4">
+          <div className="bg-white w-full mt-4">
             {reviews.map((r: any) => (
               <FeedReviewCard
                 key={r.id}

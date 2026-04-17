@@ -129,95 +129,94 @@ export default function FeedReviewCard({
   };
 
   return (
-    <div className="flex flex-row items-start gap-3 w-full px-4 py-3 border-b border-gray-100 bg-white">
-      {/* Portada */}
-      <div className="w-20 h-20 shrink-0 flex items-center justify-center">
-        {review.spotify_image_url ? (
-          <img
-            src={review.spotify_image_url}
-            alt={review.spotify_title || "Álbum/Canción desconocida"}
-            className="object-cover w-full h-full rounded-md shadow-sm border border-gray-200"
-          />
-        ) : (
-          <div className="w-full h-full rounded-md bg-gray-100 border border-gray-200" />
-        )}
-      </div>
-
-      {/* Info y reseña */}
-      <div className="flex flex-col flex-1 min-w-0 mt-0">
-        {/* Fila usuario */}
-        <div className="flex items-center gap-1.5 mb-1 min-w-0">
+    <div className="flex flex-col gap-2 px-4 pt-4 pb-5 border-b border-gray-200 w-full">
+      {/* Header (Usuario) */}
+      <div className="flex items-center justify-between">
+        <Link href={`/${username}`} className="flex items-center gap-2 group min-w-0 flex-1">
           {author.avatar_url ? (
             <img
               src={author.avatar_url}
               alt={username}
-              className="w-5 h-5 rounded-full object-cover"
+              className="w-9 h-9 rounded-full object-cover group-hover:opacity-80 transition-opacity"
             />
           ) : (
-            <div className="w-5 h-5 rounded-full bg-gray-300 flex items-center justify-center text-[10px] font-bold text-white">
+            <div className="w-9 h-9 rounded-full bg-gray-300 flex items-center justify-center text-[12px] font-bold text-white">
               {username.charAt(0).toUpperCase()}
             </div>
           )}
-          <Link
-            href={`/${username}`}
-            className="text-xs font-bold text-gray-900 truncate"
-          >
-            {displayName || "usuario"}
-          </Link>
-          <span className="text-[11px] text-gray-500 truncate">@{username}</span>
-          <span className="text-gray-300">&middot;</span>
-          <span className="text-[11px] text-gray-500 shrink-0">{timeLabel}</span>
-        </div>
 
-        {/* Fila obra */}
-        <div>
-          <div className="text-sm font-black text-gray-900 leading-none mb-0.5 truncate w-full wrap-break-word font-sans">
-            {review.spotify_title || "Álbum/Canción desconocida"}
+          <div className="flex flex-col leading-tight min-w-0">
+            <span className="text-[14px] font-bold text-gray-900 truncate group-hover:underline decoration-gray-400 underline-offset-2">
+              {displayName || "usuario"}
+            </span>
+            <span className="text-[12px] text-gray-500 truncate">
+              @{username} • {timeLabel}
+            </span>
           </div>
-          <p className="text-xs text-gray-500 leading-none mb-0.5 truncate w-full wrap-break-word font-sans">
-            {review.spotify_artist || ""}
-          </p>
-        </div>
+        </Link>
+      </div>
 
-        {/* Fila calificación + Like */}
-        <div className="flex items-center justify-between mt-0.5 mb-1.5">
-          {/* Estrellas */}
-          <div className="flex items-center gap-0.5 text-blue-600 text-xs">
+      {/* Zona de la Obra (Attachment) */}
+      <Link
+        href={`/${review.type}/${review.spotify_id}`}
+        className="flex gap-3 p-2.5 my-1 bg-transparent border border-gray-200 rounded-xl group hover:bg-gray-50 transition-all"
+      >
+        {/* Portada un pelín más grande para equilibrar */}
+        {review.spotify_image_url ? (
+          <img
+            src={review.spotify_image_url}
+            alt={review.spotify_title || "Álbum/Canción desconocida"}
+            className="w-12 h-12 rounded-md object-cover shadow-sm shrink-0 border border-black/5"
+          />
+        ) : (
+          <div className="w-12 h-12 rounded-md bg-gray-100 border border-black/5 shrink-0" />
+        )}
+
+        {/* Información apilada (Título -> Artista -> Estrellas) */}
+        <div className="flex flex-col justify-center min-w-0">
+          <span className="text-[14.5px] font-bold text-gray-900 truncate group-hover:underline decoration-gray-400 underline-offset-2 leading-tight">
+            {review.spotify_title || "Álbum/Canción desconocida"}
+          </span>
+          <span className="text-[12px] text-gray-500 truncate mb-0.5">
+            {review.spotify_artist || ""}
+          </span>
+          <div className="flex items-center gap-0.5">
             {[1, 2, 3, 4, 5].map((i) =>
               i <= (review.rating || 0) ? (
-                <FaStar key={i} size={13} className="text-blue-600" />
+                <FaStar key={i} size={12} className="text-blue-600" />
               ) : (
-                <FaRegStar key={i} size={13} className="text-gray-200" />
+                <FaRegStar key={i} size={12} className="text-gray-300" />
               )
             )}
           </div>
-          {/* Botón de Like */}
-          <button
-            onClick={handleToggleLike}
-            className="flex items-center gap-1.5 mt-2 group"
-            disabled={isLoadingLike}
-            aria-label={isLiked ? "Quitar like" : "Dar like"}
-            type="button"
-          >
-            {isLiked ? (
-              <FaHeart className="w-4 h-4 text-blue-600 scale-110 transition-transform" />
-            ) : (
-              <FaRegHeart className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
-            )}
-            {likesCount > 0 && (
-              <span className={`text-xs ${isLiked ? 'text-blue-600 font-bold' : 'text-gray-500'}`}>
-                {likesCount}
-              </span>
-            )}
-          </button>
         </div>
+      </Link>
 
-        {/* Texto de la reseña */}
-        {review.review_text?.trim() && (
-          <p className="text-sm text-gray-800 leading-snug w-full wrap-break-word mt-1">
-            {review.review_text}
-          </p>
-        )}
+      {/* Texto de la reseña */}
+      {review.review_text?.trim() && (
+        <p className="text-[14px] text-gray-800 leading-snug">
+          {review.review_text}
+        </p>
+      )}
+
+      {/* Footer: Acción de Like */}
+      <div className="flex items-center justify-end mt-1">
+        <button
+          onClick={handleToggleLike}
+          className="flex items-center gap-1.5 group"
+          disabled={isLoadingLike}
+          aria-label={isLiked ? "Quitar like" : "Dar like"}
+          type="button"
+        >
+          {isLiked ? (
+            <FaHeart className="w-4 h-4 text-blue-600 scale-110 transition-transform" />
+          ) : (
+            <FaRegHeart className="w-4 h-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+          )}
+          <span className={`text-[12px] font-bold ${isLiked ? "text-blue-600" : "text-gray-500"}`}>
+            {likesCount > 0 ? likesCount : ""}
+          </span>
+        </button>
       </div>
     </div>
   );

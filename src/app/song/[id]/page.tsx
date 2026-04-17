@@ -539,7 +539,11 @@ export default function SongPage() {
           <>
             <Link
               href={`/album/${album.id}`}
-              className="w-full flex items-center gap-3 mt-6 p-2.5 rounded-xl hover:bg-black/5 dark:hover:bg-white/10 transition-colors border-2 border-black/15 dark:border-white/20"
+              className={`w-full flex items-center gap-3 mt-6 p-2.5 rounded-xl transition-colors border-2 ${
+                isBackgroundDark
+                  ? 'border-white/20 hover:bg-white/10'
+                  : 'border-black/15 hover:bg-black/5'
+              }`}
               style={{ color: 'inherit' }}
             >
               <img
@@ -563,7 +567,13 @@ export default function SongPage() {
                 <button
                   onClick={goToPreviousTrack}
                   disabled={!hasPrevious}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold transition-all border-2 border-black/15 dark:border-white/20 ${hasPrevious ? 'hover:bg-black/5 dark:hover:bg-white/10 opacity-80 hover:opacity-100 active:scale-[0.98]' : 'opacity-30 cursor-not-allowed'}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold transition-all border-2 ${
+                    isBackgroundDark ? 'border-white/20' : 'border-black/15'
+                  } ${
+                    hasPrevious
+                      ? `${isBackgroundDark ? 'hover:bg-white/10' : 'hover:bg-black/5'} opacity-80 hover:opacity-100 active:scale-[0.98]`
+                      : 'opacity-30 cursor-not-allowed'
+                  }`}
                 >
                   <FaChevronLeft className="w-3 h-3" />
                   Anterior
@@ -571,7 +581,13 @@ export default function SongPage() {
                 <button
                   onClick={goToNextTrack}
                   disabled={!hasNext}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold transition-all border-2 border-black/15 dark:border-white/20 ${hasNext ? 'hover:bg-black/5 dark:hover:bg-white/10 opacity-80 hover:opacity-100 active:scale-[0.98]' : 'opacity-30 cursor-not-allowed'}`}
+                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-[13px] font-bold transition-all border-2 ${
+                    isBackgroundDark ? 'border-white/20' : 'border-black/15'
+                  } ${
+                    hasNext
+                      ? `${isBackgroundDark ? 'hover:bg-white/10' : 'hover:bg-black/5'} opacity-80 hover:opacity-100 active:scale-[0.98]`
+                      : 'opacity-30 cursor-not-allowed'
+                  }`}
                 >
                   Siguiente
                   <FaChevronRight className="w-3 h-3" />
