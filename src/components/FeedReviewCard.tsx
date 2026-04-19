@@ -7,8 +7,7 @@ import { FaStar, FaRegStar } from "react-icons/fa";
 // ...existing code...
 import { FaRegHeart, FaHeart } from "react-icons/fa";
 import { useEffect, useState } from "react";
-import { createBrowserClient } from "@supabase/ssr";
-import type { User } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type FeedReview = {
   id: string;
@@ -44,6 +43,8 @@ export default function FeedReviewCard({
   timeLabelShort,
   initialIsLiked = false,
   initialLikesCount = 0,
+  currentUserId,
+  supabaseClient,
 }: {
   review: FeedReview;
   author: FeedAuthor;
@@ -51,26 +52,18 @@ export default function FeedReviewCard({
   timeLabelShort?: string;
   initialIsLiked?: boolean;
   initialLikesCount?: number;
+  currentUserId: string | null;
+  supabaseClient: SupabaseClient;
 }) {
   const username = author.username || "usuario";
   const displayName = author.full_name?.trim() || "";
+  const [isMounted, setIsMounted] = useState(false);
   const [isLiked, setIsLiked] = useState(initialIsLiked);
   const [likesCount, setLikesCount] = useState(initialLikesCount);
-  const [user, setUser] = useState<User | null>(null);
   const [isLoadingLike, setIsLoadingLike] = useState(false);
-  const supabaseClient = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   useEffect(() => {
-    let isMounted = true;
-    supabaseClient.auth.getUser().then(({ data }) => {
-      if (isMounted) setUser(data?.user ?? null);
-    });
-    return () => {
-      isMounted = false;
-    };
+    setIsMounted(true);
   }, []);
 
   // Si el parent re-hidrata la review con `user_has_liked`, reflejarlo en UI
@@ -81,34 +74,29 @@ export default function FeedReviewCard({
     }
   }, [review.user_has_liked]);
 
-  // Recalcular `isLiked` cuando el usuario termina de cargar (evita race en hard reload)
-  useEffect(() => {
-    if (!user?.id) return;
-    if (Array.isArray(review.review_likes)) {
-      const liked = review.review_likes.some((like) => like.user_id === user.id);
-      setIsLiked(liked);
-    }
-  }, [user?.id, review.review_likes]);
-
   const handleToggleLike = async () => {
-    if (!user || isLoadingLike) return;
+    if (isLoadingLike) return;
+    if (!currentUserId) {
+      alert("Debes iniciar sesión para dar like.");
+      return;
+    }
     setIsLoadingLike(true);
     const prevLiked = isLiked;
     const prevCount = likesCount;
     setIsLiked(!prevLiked);
-    setLikesCount(prevLiked ? prevCount - 1 : prevCount + 1);
+    setLikesCount(prevLiked ? Math.max(0, prevCount - 1) : prevCount + 1);
     try {
       if (!prevLiked) {
         const { error } = await supabaseClient
           .from("review_likes")
-          .insert([{ review_id: review.id, user_id: user.id }]);
+          .insert([{ review_id: review.id, user_id: currentUserId }]);
         if (error) throw error;
       } else {
         const { error } = await supabaseClient
           .from("review_likes")
           .delete()
           .eq("review_id", review.id)
-          .eq("user_id", user.id);
+          .eq("user_id", currentUserId);
         if (error) throw error;
       }
     } catch (err: any) {
@@ -159,7 +147,7 @@ export default function FeedReviewCard({
                 @{username}
               </span>
               <span className="text-[13px] text-gray-500 shrink-0">
-                • {timeLabelShort || timeLabel}
+                • {isMounted ? (timeLabelShort || timeLabel) : "..."}
               </span>
             </div>
           </Link>

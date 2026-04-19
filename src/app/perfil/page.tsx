@@ -86,11 +86,15 @@ function ProfileReviewCard({
     }
   };
 
-  const tipoLabel = review.item_type === 'album' ? 'Álbum' : 'Canción';
+  const rawType = String(review?.item_type || review?.type || '').toLowerCase();
+  const normalizedType = rawType === 'album' || rawType === 'albums' ? 'album' : 'song';
+  const tipoLabel = normalizedType === 'album' ? 'Álbum' : 'Canción';
+  const itemId = review.item_id || review.spotify_id;
+  const itemHref = itemId ? `/${normalizedType}/${itemId}` : '#';
   return (
     <div className="flex gap-3 sm:gap-4 py-4 border-b border-gray-200 w-full last:border-0 items-start">
       {/* IZQUIERDA: Portada grande */}
-      <a href={`/${review.item_type || review.type}/${review.item_id || review.spotify_id}`}
+      <a href={itemHref}
         className="shrink-0 group">
         <img
           src={review.image_url || review.spotify_image_url || review.image}
@@ -101,7 +105,7 @@ function ProfileReviewCard({
       {/* DERECHA: Toda la información, texto y botones */}
       <div className="flex flex-col flex-1 min-w-0 min-h-[5rem] sm:min-h-[6rem]">
         {/* Título, Artista y Tipo */}
-        <a href={`/${review.item_type || review.type}/${review.item_id || review.spotify_id}`}
+        <a href={itemHref}
           className="group w-full min-w-0 mb-0.5 block">
           <h3 className="text-[15.5px] font-bold text-gray-900 leading-tight line-clamp-2 group-hover:underline decoration-gray-900 underline-offset-2">
             {review.title || review.spotify_title || 'Obra Desconocida'}
@@ -535,7 +539,7 @@ export default function PerfilPage() {
             ) : (
               <a
                 key={idx}
-                href={`/track/${song.id}`}
+                href={`/song/${song.id}`}
                 className="flex items-center gap-3 px-4 py-2 w-full text-left hover:bg-black/5 rounded transition-colors"
                 aria-label={`Ver canción top ${position}`}
               >

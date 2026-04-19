@@ -1,38 +1,9 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import Link from "next/link";
-import { FaUsers } from "react-icons/fa";
 
 import BottomNav from "@/components/BottomNav";
-import FeedReviewCard from "@/components/FeedReviewCard";
-
-function timeAgo(dateString: string) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (seconds < 60) return `hace ${seconds} seg`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `hace ${minutes} min`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `hace ${hours} h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `hace ${days} d`;
-  return date.toLocaleDateString();
-}
-
-function timeAgoShort(dateString: string) {
-  const date = new Date(dateString);
-  const now = new Date();
-  const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-  if (seconds < 60) return `${seconds}s`;
-  const minutes = Math.floor(seconds / 60);
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days < 7) return `${days}d`;
-  return date.toLocaleDateString();
-}
+import FeedTabs from "@/components/FeedTabs";
 
 type CurrentUserProfile = {
   full_name: string | null;
@@ -73,54 +44,80 @@ export default async function InicioPage() {
   let followingIds: string[] = [];
   if (user) {
     const { data: followingData } = await supabase
-      .from("follows")
-      .select("followed_id")
+      .from("followers")
+      .select("following_id")
       .eq("follower_id", user.id);
     if (Array.isArray(followingData)) {
-      followingIds = followingData.map((f) => f.followed_id);
+      followingIds = followingData.map((f: any) => f.following_id);
     }
     followingIds.push(user.id); // Incluir el propio user_id
   }
 
 
-  // Feed global: todas las reseñas con datos de perfil anidados y likes del usuario actual
-  const { data: reviewsData, error: reviewsError } = await supabase
-    .from('reviews')
+  const mapReviews = (rows: any[] | null | undefined) => {
+    if (!Array.isArray(rows)) return [];
+    return rows.map((review: any) => {
+      const likeCountFromEmbed =
+        Array.isArray(review.likes) && (typeof review.likes?.[0]?.count === "number" || typeof review.likes?.[0]?.count === "string")
+          ? Number(review.likes[0].count)
+          : undefined;
+
+      return {
+        ...review,
+        user_has_liked: Array.isArray(review.review_likes)
+          ? review.review_likes.some((like: any) => like.user_id === user?.id)
+          : false,
+        likes_count:
+          typeof likeCountFromEmbed === "number"
+            ? likeCountFromEmbed
+            : (typeof review.likes_count === "number"
+                ? review.likes_count
+                : (Array.isArray(review.review_likes) ? review.review_likes.length : 0)),
+      };
+    });
+  };
+
+  // Feed global: todas las reseñas (para la pestaña Populares)
+  // Nota: traemos más items para evitar sesgo hacia 'siguiendo' por límite chico.
+  const { data: allReviewsData, error: allReviewsError } = await supabase
+    .from("reviews")
     .select(`
       *,
       profiles (*),
       review_likes (user_id),
       likes:review_likes (count)
     `)
-    .order('created_at', { ascending: false })
-    .limit(15);
+    .order("created_at", { ascending: false })
+    .limit(100);
 
-  if (reviewsError) {
-    console.error('Error fetching reviews:', reviewsError);
+  if (allReviewsError) {
+    console.error("Error fetching all reviews:", allReviewsError);
   }
-  // Mapear para inyectar user_has_liked
-  const reviews = Array.isArray(reviewsData)
-    ? reviewsData.map((review: any) => {
-        const likeCountFromEmbed =
-          Array.isArray(review.likes) && (typeof review.likes?.[0]?.count === 'number' || typeof review.likes?.[0]?.count === 'string')
-            ? Number(review.likes[0].count)
-            : undefined;
 
-        return {
-          ...review,
-          user_has_liked: Array.isArray(review.review_likes)
-            ? review.review_likes.some((like: any) => like.user_id === user?.id)
-            : false,
-          // Preferimos el COUNT real de `review_likes` para que no desaparezca tras recargar.
-          likes_count:
-            typeof likeCountFromEmbed === 'number'
-              ? likeCountFromEmbed
-              : (typeof review.likes_count === 'number'
-                  ? review.likes_count
-                  : (Array.isArray(review.review_likes) ? review.review_likes.length : 0)),
-        };
-      })
-    : [];
+  // Feed de siguiendo: sólo usuarios seguidos + yo (para la pestaña Siguiendo)
+  let followingReviewsData: any[] | null = null;
+  if (user && followingIds.length > 0) {
+    const { data, error } = await supabase
+      .from("reviews")
+      .select(`
+        *,
+        profiles (*),
+        review_likes (user_id),
+        likes:review_likes (count)
+      `)
+      .in("user_id", followingIds)
+      .order("created_at", { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.error("Error fetching following reviews:", error);
+    } else {
+      followingReviewsData = data ?? null;
+    }
+  }
+
+  const allReviews = mapReviews(allReviewsData);
+  const followingReviews = mapReviews(followingReviewsData);
 
   const { data: trendingData, error: trendingError } = await supabase
     .from("trending_this_week")
@@ -232,40 +229,8 @@ export default async function InicioPage() {
         )}
       </div>
 
-      <h2 className="text-xl font-bold text-gray-900 px-4 mt-8 mb-4">Actividad reciente</h2>
-
-      <div className="pb-32">
-        {reviews.length === 0 ? (
-          <div className="px-4">
-            <div className="bg-[#F5F5F7] rounded-2xl p-8 flex flex-col items-center text-center">
-              <FaUsers className="text-4xl text-gray-400 mb-3" />
-              <div className="text-xl font-bold text-gray-900 mb-1">Tu feed está vacío</div>
-              <div className="text-gray-500 mb-6">
-                Seguí a tus amigos para ver sus últimas reseñas.
-              </div>
-              <Link
-                href="/buscar"
-                className="px-6 py-3 rounded-full bg-blue-600 text-white font-bold hover:bg-blue-700"
-              >
-                Buscar amigos
-              </Link>
-            </div>
-          </div>
-        ) : (
-          <div className="bg-white w-full mt-4">
-            {reviews.map((r: any) => (
-              <FeedReviewCard
-                key={r.id}
-                review={r}
-                author={r.profiles}
-                timeLabel={timeAgo(r.created_at)}
-                timeLabelShort={timeAgoShort(r.created_at)}
-                initialIsLiked={r.user_has_liked}
-                initialLikesCount={r.likes_count}
-              />
-            ))}
-          </div>
-        )}
+      <div className="mt-8">
+        <FeedTabs followingReviews={followingReviews} allReviews={allReviews} />
       </div>
 
       <BottomNav />

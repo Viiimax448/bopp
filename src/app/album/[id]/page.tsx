@@ -416,7 +416,7 @@ export default function AlbumPage() {
           <div className="absolute top-0 left-0 w-full p-4 flex items-center justify-between z-10">
             <div className="flex items-center gap-2">
               <button
-                onClick={() => router.push('/')}
+                onClick={() => router.push('/inicio')}
                 className={`w-10 h-10 flex items-center justify-center rounded-full backdrop-blur-md active:scale-[0.95] transition-all
                   ${isBackgroundDark ? 'bg-white/10' : 'bg-black/10'}
                 `}

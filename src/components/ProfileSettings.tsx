@@ -14,8 +14,10 @@ export default function ProfileSettings({
   );
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    window.location.href = "/login";
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+      window.location.href = "/";
+    }
   };
 
   if (!open) return null;

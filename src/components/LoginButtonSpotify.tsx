@@ -22,10 +22,10 @@ export default function LoginButtonSpotify() {
   return (
     <button
       onClick={handleLogin}
-      className="w-full max-w-sm flex items-center justify-center gap-3 bg-[#1DB954] text-white py-4 px-4 rounded-[1rem] font-bold text-lg hover:bg-[#1ed760] transition-transform active:scale-95"
+      className="w-full max-w-sm flex items-center justify-center gap-3 bg-white border border-gray-200 text-gray-900 py-4 px-4 rounded-2xl font-semibold text-lg hover:bg-gray-50 transition active:scale-[0.99]"
     >
       <FaSpotify className="text-[26px]" />
-      Iniciar sesión con Spotify
+      Continuar con Spotify
     </button>
   );
 }

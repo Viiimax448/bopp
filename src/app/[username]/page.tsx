@@ -8,7 +8,6 @@ import { FaEllipsisH, FaRegStar, FaStar, FaStarHalfAlt, FaHeart, FaRegHeart, FaA
 import Link from "next/link";
 
 import BottomNav from "@/components/BottomNav";
-import FollowButton from "@/components/FollowButton";
 import StarRating from "@/components/StarRating";
 
 import type { TopItem } from "../perfil/TopPickerModal.types";
@@ -24,6 +23,7 @@ export default function PublicProfilePage() {
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
   const [isFollowing, setIsFollowing] = useState(false);
+  const [followLoading, setFollowLoading] = useState(false);
   const [isShareMenuOpen, setIsShareMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -108,12 +108,59 @@ export default function PublicProfilePage() {
     );
     supabase
       .from("followers")
-      .select("*")
+      .select("follower_id")
       .eq("follower_id", session.user.id)
       .eq("following_id", profile.id)
-      .single()
-      .then(({ data }) => setIsFollowing(!!data));
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          // Evitar romper UI si PostgREST devuelve 406 u otros.
+          setIsFollowing(false);
+          return;
+        }
+        setIsFollowing(Boolean(data));
+      });
   }, [session?.user?.id, profile?.id]);
+
+  const handleFollowToggle = async () => {
+    if (!session?.user?.id || !profile?.id) return;
+    if (session.user.id === profile.id) return;
+    if (followLoading) return;
+
+    setFollowLoading(true);
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    );
+
+    const prev = isFollowing;
+    setIsFollowing(!prev);
+    setFollowersCount((c) => Math.max(0, c + (prev ? -1 : 1)));
+
+    try {
+      if (prev) {
+        const { error } = await supabase
+          .from("followers")
+          .delete()
+          .eq("follower_id", session.user.id)
+          .eq("following_id", profile.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("followers")
+          .insert({ follower_id: session.user.id, following_id: profile.id });
+        if (error) throw error;
+      }
+    } catch (e) {
+      // Rollback
+      setIsFollowing(prev);
+      setFollowersCount((c) => Math.max(0, c + (prev ? 1 : -1)));
+      // eslint-disable-next-line no-console
+      console.error("Error al actualizar follow:", e);
+    } finally {
+      setFollowLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -326,15 +373,17 @@ export default function PublicProfilePage() {
         {session?.user?.id && !isOwnProfile && profile?.id ? (
           isFollowing ? (
             <button 
-              onClick={() => setIsFollowing(false)}
-              className="px-8 py-1.5 rounded-full border border-gray-300 text-[14px] font-bold text-gray-900 bg-transparent hover:bg-black/5 transition-colors active:scale-95"
+              onClick={handleFollowToggle}
+              disabled={followLoading}
+              className={`px-8 py-1.5 rounded-full border border-gray-300 text-[14px] font-bold text-gray-900 bg-transparent hover:bg-black/5 transition-colors active:scale-95 ${followLoading ? "opacity-60 cursor-not-allowed" : ""}`}
             >
               Siguiendo
             </button>
           ) : (
             <button 
-              onClick={() => setIsFollowing(true)}
-              className="px-8 py-1.5 rounded-full text-[14px] font-bold text-white bg-gray-900 hover:opacity-90 transition-opacity active:scale-95"
+              onClick={handleFollowToggle}
+              disabled={followLoading}
+              className={`px-8 py-1.5 rounded-full text-[14px] font-bold text-white bg-gray-900 hover:opacity-90 transition-opacity active:scale-95 ${followLoading ? "opacity-60 cursor-not-allowed" : ""}`}
             >
               Seguir
             </button>
@@ -372,7 +421,7 @@ export default function PublicProfilePage() {
           song ? (
             <Link 
               key={index}
-              href={`/cancion/${song.id}`}
+              href={`/song/${song.id}`}
               className="flex items-center gap-3 w-full group hover:bg-black/5 p-1 -ml-1 rounded-lg transition-colors"
             >
               <span className="text-[13px] font-bold text-gray-400 w-4 text-center shrink-0">
@@ -495,7 +544,11 @@ function PublicProfileReviewCard({
     }
   };
 
-  const tipoLabel = review.item_type === 'album' ? 'Álbum' : 'Canción';
+  const rawType = String(review?.item_type || review?.type || '').toLowerCase();
+  const normalizedType = rawType === 'album' || rawType === 'albums' ? 'album' : 'song';
+  const tipoLabel = normalizedType === 'album' ? 'Álbum' : 'Canción';
+  const itemId = review.item_id || review.spotify_id;
+  const itemHref = itemId ? `/${normalizedType}/${itemId}` : '#';
   return (
     <div className="flex gap-3 sm:gap-4 py-4 border-b border-gray-200 w-full last:border-0 items-start">
       {/* IZQUIERDA: Portada grande */}
@@ -507,7 +560,7 @@ function PublicProfileReviewCard({
       {/* DERECHA: Toda la información, texto y botones */}
       <div className="flex flex-col flex-1 min-w-0 min-h-[5rem] sm:min-h-[6rem]">
         {/* Título, Artista y Tipo */}
-        <a href={`/${review.item_type || review.type}/${review.item_id || review.spotify_id}`}
+        <a href={itemHref}
           className="group w-full min-w-0 mb-0.5 block">
           <h3 className="text-[15.5px] font-bold text-gray-900 leading-tight line-clamp-2 group-hover:underline decoration-gray-900 underline-offset-2">
             {review.title || review.spotify_title || 'Obra Desconocida'}

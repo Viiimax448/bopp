@@ -22,6 +22,11 @@ type TrendingItem = {
 export default function TendenciasPage() {
   const [timeRange, setTimeRange] = useState<TimeFilter>("semana");
   const [trendingData, setTrendingData] = useState<TrendingItem[]>([]);
+  const [visibleCount, setVisibleCount] = useState(17);
+
+  const MAX_TRENDING = 50;
+  const PAGE_SIZE = 9;
+  const INITIAL_VISIBLE = 17;
 
   const supabase = useMemo(
     () =>
@@ -45,7 +50,7 @@ export default function TendenciasPage() {
         .order("review_count", { ascending: false })
         .order("score", { ascending: false })
         .order("created_at", { ascending: false })
-        .limit(15);
+        .range(0, MAX_TRENDING - 1);
 
       if (cancelled) return;
       if (error) {
@@ -63,8 +68,19 @@ export default function TendenciasPage() {
     };
   }, [supabase, timeRange]);
 
-  const topFive = trendingData.slice(0, 5);
-  const restOfTrending = trendingData.slice(5, 15);
+  useEffect(() => {
+    setVisibleCount(INITIAL_VISIBLE);
+  }, [timeRange]);
+
+  const clampedMaxVisible = Math.min(MAX_TRENDING, trendingData.length);
+  const canShowMore = visibleCount < clampedMaxVisible;
+  const handleShowMore = () => {
+    setVisibleCount((prev) => Math.min(prev + PAGE_SIZE, clampedMaxVisible));
+  };
+
+  const topCount = Math.min(5, trendingData.length);
+  const topFive = trendingData.slice(0, topCount);
+  const restOfTrending = trendingData.slice(topCount, Math.min(visibleCount, clampedMaxVisible));
 
   return (
     <div className="min-h-screen bg-[#F5F5F7]">
@@ -135,9 +151,9 @@ export default function TendenciasPage() {
         Siguen en tendencia
       </h3>
 
-      <div className="grid grid-cols-3 gap-3 px-4 pb-24">
+      <div className="grid grid-cols-3 gap-3 px-4 pb-6">
         {restOfTrending.map((item, idx) => {
-          const position = idx + 6;
+          const position = idx + topCount + 1;
           return (
             <Link
               key={`${item.type}-${item.spotify_id}-${position}`}
@@ -184,6 +200,20 @@ export default function TendenciasPage() {
           );
         })}
       </div>
+
+      {canShowMore && (
+        <div className="px-4 pb-24">
+          <button
+            type="button"
+            onClick={handleShowMore}
+            className="w-full py-3 rounded-xl bg-white border border-black/10 text-gray-900 font-bold text-sm hover:bg-black/5 transition-colors"
+          >
+            Mostrar más
+          </button>
+        </div>
+      )}
+
+      {!canShowMore && <div className="pb-24" />}
 
       <BottomNav />
     </div>
